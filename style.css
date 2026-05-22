@@ -912,23 +912,20 @@ html {
   white-space:nowrap;
 }
 
-/* Đảm bảo hidden hoạt động với mọi phần tử */
-.hidden {
+/* Buộc ẩn login screen khi có class hidden */
+#loginScreen.hidden {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
 }
 
-/* Đảm bảo login screen không đè lên app khi ẩn */
-.login-screen.hidden {
-  display: none !important;
-  visibility: hidden;
-  pointer-events: none;
+/* Buộc hiện app khi không có hidden */
+#appContainer {
+  display: block !important;
 }
 
-/* App container hiển thị đúng */
-.app {
-  display: block;
-}
-
-.app.hidden {
+#appContainer.hidden {
   display: none !important;
 }
