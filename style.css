@@ -911,3 +911,24 @@ html {
   margin:0;
   white-space:nowrap;
 }
+
+/* Đảm bảo hidden hoạt động với mọi phần tử */
+.hidden {
+  display: none !important;
+}
+
+/* Đảm bảo login screen không đè lên app khi ẩn */
+.login-screen.hidden {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* App container hiển thị đúng */
+.app {
+  display: block;
+}
+
+.app.hidden {
+  display: none !important;
+}
