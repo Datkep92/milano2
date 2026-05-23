@@ -57,18 +57,11 @@ const detailPopup = document.getElementById("detailPopup");
 const detailTitle = document.getElementById("detailTitle");
 const detailContent = document.getElementById("detailContent");
 
-// Kiểm tra element tồn tại
-console.log("=== EMPLOYEE.JS INIT ===");
-console.log("expenseFab:", expenseFab);
-console.log("debtFab:", debtFab);
-console.log("paymentFab:", paymentFab);
-
 // ========== KHỞI TẠO ==========
 if (reportDate) {
   reportDate.value = getToday();
 }
 
-// Format input money
 if (bankInput) formatInputMoney(bankInput);
 if (cashInput) formatInputMoney(cashInput);
 if (reserveInput) formatInputMoney(reserveInput);
@@ -125,7 +118,6 @@ function doSaveReport() {
   if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
 }
 
-// Auto save event
 if (bankInput) bankInput.addEventListener("input", autoSaveReport);
 if (cashInput) cashInput.addEventListener("input", autoSaveReport);
 if (reserveInput) reserveInput.addEventListener("input", autoSaveReport);
@@ -141,7 +133,6 @@ function checkMissingReport() {
 }
 checkMissingReport();
 
-// Chốt ngày
 if (completeDayBtn) {
   completeDayBtn.onclick = () => {
     const date = getCurrentDate();
@@ -153,48 +144,39 @@ if (completeDayBtn) {
 }
 
 // ========== FAB BUTTONS ==========
-// EXPENSE FAB
 if (expenseFab) {
   expenseFab.onclick = () => {
     console.log("Expense FAB clicked");
     editingExpenseId = null;
     if (expensePopupTitle) expensePopupTitle.innerText = "Thêm Chi Phí";
     renderRecentExpenses();
-    if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden");
+    if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden-panel");
     if (expenseDisplay) expenseDisplay.innerText = expenseName?.value || "Chọn nguyên liệu";
     openPopup("expensePopup");
   };
-} else {
-  console.error("expenseFab not found!");
 }
 
-// DEBT FAB
 if (debtFab) {
   debtFab.onclick = () => {
     console.log("Debt FAB clicked");
     editingDebtId = null;
     if (debtPopupTitle) debtPopupTitle.innerText = "Thêm Công Nợ";
     renderRecentCustomers();
-    if (customerSmartPanel) customerSmartPanel.classList.add("hidden");
+    if (customerSmartPanel) customerSmartPanel.classList.add("hidden-panel");
     if (customerDisplay) customerDisplay.innerText = debtCustomer?.value || "Chọn khách";
     openPopup("debtPopup");
   };
-} else {
-  console.error("debtFab not found!");
 }
 
-// PAYMENT FAB
 if (paymentFab) {
   paymentFab.onclick = () => {
     console.log("Payment FAB clicked");
     renderRecentPayments();
-    if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden");
+    if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden-panel");
     if (paymentDisplay) paymentDisplay.innerText = paymentCustomer?.value || "Chọn khách";
     updatePaymentInfo();
     openPopup("paymentPopup");
   };
-} else {
-  console.error("paymentFab not found!");
 }
 
 // ========== SAVE EXPENSE ==========
@@ -476,7 +458,7 @@ function renderRecentExpenses() {
 function selectExpenseRecent(name) {
   if (expenseName) expenseName.value = name;
   if (expenseDisplay) expenseDisplay.innerText = name;
-  if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden");
+  if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden-panel");
   if (expenseAmount) expenseAmount.focus();
 }
 
@@ -492,7 +474,7 @@ function renderRecentCustomers() {
 function selectRecentCustomer(name) {
   if (debtCustomer) debtCustomer.value = name;
   if (customerDisplay) customerDisplay.innerText = name;
-  if (customerSmartPanel) customerSmartPanel.classList.add("hidden");
+  if (customerSmartPanel) customerSmartPanel.classList.add("hidden-panel");
   if (debtAmountInput) debtAmountInput.focus();
 }
 
@@ -510,7 +492,7 @@ function renderRecentPayments() {
 function selectPaymentCustomer(name) {
   if (paymentCustomer) paymentCustomer.value = name;
   if (paymentDisplay) paymentDisplay.innerText = name;
-  if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden");
+  if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden-panel");
   updatePaymentInfo();
   if (paymentAmountInput) paymentAmountInput.focus();
 }
@@ -525,21 +507,21 @@ function updatePaymentInfo() {
 // ========== DROPDOWN ==========
 if (expenseDisplay) {
   expenseDisplay.onclick = () => {
-    if (expenseSmartPanel) expenseSmartPanel.classList.toggle("hidden");
+    if (expenseSmartPanel) expenseSmartPanel.classList.toggle("hidden-panel");
     if (expenseName) expenseName.focus();
   };
 }
 
 if (customerDisplay) {
   customerDisplay.onclick = () => {
-    if (customerSmartPanel) customerSmartPanel.classList.toggle("hidden");
+    if (customerSmartPanel) customerSmartPanel.classList.toggle("hidden-panel");
     if (debtCustomer) debtCustomer.focus();
   };
 }
 
 if (paymentDisplay) {
   paymentDisplay.onclick = () => {
-    if (paymentSmartPanel) paymentSmartPanel.classList.toggle("hidden");
+    if (paymentSmartPanel) paymentSmartPanel.classList.toggle("hidden-panel");
     if (paymentCustomer) paymentCustomer.focus();
   };
 }
@@ -608,7 +590,7 @@ if (expenseDropdown) {
     const text = e.target.innerText.replace('+ Tạo mới "', '').replace('"', '');
     if (expenseName) expenseName.value = text;
     if (expenseDisplay) expenseDisplay.innerText = text;
-    if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden");
+    if (expenseSmartPanel) expenseSmartPanel.classList.add("hidden-panel");
     if (expenseAmount) expenseAmount.focus();
   });
 }
@@ -620,7 +602,7 @@ if (customerDropdown) {
     const text = item.innerText.split("\n")[0].replace('+ Tạo mới "', '').replace('"', '').trim();
     if (debtCustomer) debtCustomer.value = text;
     if (customerDisplay) customerDisplay.innerText = text;
-    if (customerSmartPanel) customerSmartPanel.classList.add("hidden");
+    if (customerSmartPanel) customerSmartPanel.classList.add("hidden-panel");
     if (debtAmountInput) debtAmountInput.focus();
   });
 }
@@ -632,7 +614,7 @@ if (paymentDropdown) {
     const customer = item.innerText.split("\n")[0].trim();
     if (paymentCustomer) paymentCustomer.value = customer;
     if (paymentDisplay) paymentDisplay.innerText = customer;
-    if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden");
+    if (paymentSmartPanel) paymentSmartPanel.classList.add("hidden-panel");
     updatePaymentInfo();
     if (paymentAmountInput) paymentAmountInput.focus();
   });
@@ -752,67 +734,4 @@ if (openExpenseHistory) {
               <button class="action-btn edit-btn" onclick="editExpense('${item.id}')">Sửa</button>
               <button class="action-btn delete-btn" onclick="deleteExpense('${item.id}')">Xóa</button>
             </div>
-          </div>
-        `;
-      });
-    }
-    if (detailContent) detailContent.innerHTML = html;
-    openPopup("detailPopup");
-  };
-}
-
-if (openDebtHistory) {
-  openDebtHistory.onclick = () => {
-    if (detailTitle) detailTitle.innerText = "Công Nợ Hôm Nay";
-    const date = getCurrentDate();
-    let html = "";
-    const list = appData.debtTransactions.filter(x => x.date === date && !x.deleted);
-    if (list.length === 0) {
-      html = '<div class="empty-text">Chưa có dữ liệu</div>';
-    } else {
-      list.forEach(item => {
-        html += `
-          <div class="history-item">
-            <strong>${item.type === "debt_add" ? "🧾" : "💰"} ${item.customer}</strong><br>
-            ${item.type === "debt_add" ? "+" : "-"} ${formatMoney(item.amount)}
-            <div class="action-row">
-              <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">Sửa</button>
-              <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">Xóa</button>
-            </div>
-          </div>
-        `;
-      });
-    }
-    if (detailContent) detailContent.innerHTML = html;
-    openPopup("detailPopup");
-  };
-}
-
-// ========== DATE NAVIGATION ==========
-if (prevDateBtn) {
-  prevDateBtn.onclick = () => {
-    if (!reportDate) return;
-    const d = new Date(reportDate.value);
-    d.setDate(d.getDate() - 1);
-    reportDate.value = d.toISOString().split("T")[0];
-    loadTodayData();
-  };
-}
-
-if (nextDateBtn) {
-  nextDateBtn.onclick = () => {
-    if (!reportDate) return;
-    const d = new Date(reportDate.value);
-    d.setDate(d.getDate() + 1);
-    reportDate.value = d.toISOString().split("T")[0];
-    loadTodayData();
-  };
-}
-
-// ========== LOAD DRAFTS & INIT ==========
-loadPaymentDraft();
-loadDebtDraft();
-loadExpenseDraft();
-loadTodayData();
-
-console.log("=== EMPLOYEE.JS LOADED SUCCESSFULLY ===");
+          </
