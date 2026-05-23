@@ -205,11 +205,10 @@ body {
   opacity: 0.85;
 }
 
-/* ========== SUMMARY GRID ========== */
-.summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.summary-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
 }
 
 .summary-item {
@@ -1334,4 +1333,22 @@ textarea {
 
 .full-width{
   grid-column:1 / -1;
+}
+
+.full-width{
+  grid-column:1 / -1;
+}
+
+@media (max-width:560px){
+
+  .summary-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:10px;
+  }
+
+  .full-width{
+    grid-column:1 / -1;
+  }
+
 }
