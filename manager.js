@@ -371,6 +371,37 @@ if(!document.querySelector('#manager-styles')) {
   `;
   document.head.appendChild(style);
 }
+// Thêm hàm tính tổng công nợ tất cả khách hàng (cho manager)
+function calculateTotalDebtAll() {
+  const allCustomers = new Set();
+  
+  appData.categories.customers.forEach(c => allCustomers.add(c));
+  appData.recent.customers.forEach(c => allCustomers.add(c));
+  appData.debtTransactions.forEach(t => {
+    if (!t.deleted && t.customer) allCustomers.add(t.customer);
+  });
+  
+  let total = 0;
+  allCustomers.forEach(customer => {
+    total += calculateCustomerDebt(customer);
+  });
+  
+  return total;
+}
+// ========== TỔNG CÔNG NỢ HIỆN TẠI ==========
+function updateManagerTotalDebt() {
+  const managerTotalDebt = document.getElementById("managerTotalDebt");
+  if (managerTotalDebt && typeof window.calculateTotalDebtAll === 'function') {
+    managerTotalDebt.innerText = formatMoney(window.calculateTotalDebtAll());
+  }
+}
+
+// Cập nhật trong renderManagerDashboard
+const originalRenderManagerDashboard = renderManagerDashboard;
+renderManagerDashboard = function() {
+  originalRenderManagerDashboard();
+  updateManagerTotalDebt();
+};
 
 // ========== INIT ==========
 renderManagerDashboard();

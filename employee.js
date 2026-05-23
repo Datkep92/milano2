@@ -1,4 +1,4 @@
-// ========== DOM ELEMENTS (CHỈ KHAI BÁO NHỮNG BIẾN CẦN THIẾT CHO EMPLOYEE) ==========
+// ========== DOM ELEMENTS ==========
 const reportDate = document.getElementById("reportDate");
 const bankInput = document.getElementById("bankInput");
 const cashInput = document.getElementById("cashInput");
@@ -16,35 +16,34 @@ const nextDateBtn = document.getElementById("nextDateBtn");
 // Expense popup
 const expensePopup = document.getElementById("expensePopup");
 const expensePopupTitle = document.getElementById("expensePopupTitle");
-const expenseName = document.getElementById("expenseName");
 const expenseQty = document.getElementById("expenseQty");
 const expenseAmount = document.getElementById("expenseAmount");
-const expenseDropdown = document.getElementById("expenseDropdown");
-const expenseDisplay = document.getElementById("expenseDisplay");
-const expenseSmartPanel = document.getElementById("expenseSmartPanel");
 const recentExpenseWrap = document.getElementById("recentExpenseWrap");
 const saveExpenseBtn = document.getElementById("saveExpenseBtn");
+
+// Expense - thêm mới
+const addNewExpenseBtn = document.getElementById("addNewExpenseBtn");
+const newExpenseInput = document.getElementById("newExpenseInput");
+const newExpenseName = document.getElementById("newExpenseName");
 
 // Debt popup
 const debtPopup = document.getElementById("debtPopup");
 const debtPopupTitle = document.getElementById("debtPopupTitle");
-const debtCustomer = document.getElementById("debtCustomer");
 const debtAmount = document.getElementById("debtAmount");
 const debtNote = document.getElementById("debtNote");
-const customerDropdown = document.getElementById("customerDropdown");
-const customerDisplay = document.getElementById("customerDisplay");
-const customerSmartPanel = document.getElementById("customerSmartPanel");
 const recentCustomerWrap = document.getElementById("recentCustomerWrap");
 const saveDebtBtn = document.getElementById("saveDebtBtn");
+
+// Debt - thêm mới
+const addNewCustomerBtn = document.getElementById("addNewCustomerBtn");
+const newCustomerInput = document.getElementById("newCustomerInput");
+const newCustomerName = document.getElementById("newCustomerName");
 
 // Payment popup
 const paymentPopup = document.getElementById("paymentPopup");
 const paymentCustomer = document.getElementById("paymentCustomer");
 const paymentAmount = document.getElementById("paymentAmount");
 const paymentMethod = document.getElementById("paymentMethod");
-const paymentDropdown = document.getElementById("paymentDropdown");
-const paymentDisplay = document.getElementById("paymentDisplay");
-const paymentSmartPanel = document.getElementById("paymentSmartPanel");
 const paymentTotalDebt = document.getElementById("paymentTotalDebt");
 const paymentRemainDebt = document.getElementById("paymentRemainDebt");
 const recentPaymentWrap = document.getElementById("recentPaymentWrap");
@@ -57,62 +56,97 @@ const detailPopup = document.getElementById("detailPopup");
 const detailTitle = document.getElementById("detailTitle");
 const detailContent = document.getElementById("detailContent");
 
+// Biến lưu tạm
+let selectedExpenseName = "";
+let selectedCustomerName = "";
+
 // ========== KHỞI TẠO ==========
 reportDate.value = getToday();
 
 [bankInput, cashInput, reserveInput, expenseAmount, debtAmount, paymentAmount].forEach(formatInputMoney);
 
-// Sửa hàm renderRecentExpenses
-function renderRecentExpenses(){
+// ========== RENDER RECENT ==========
+function renderRecentExpenses() {
   if (!recentExpenseWrap) return;
-  if (!appData || !appData.recent || !appData.recent.expenses) {
-    recentExpenseWrap.innerHTML = '';
+  if (!appData || !appData.recent || !appData.recent.expenses || appData.recent.expenses.length === 0) {
+    recentExpenseWrap.innerHTML = '<div class="empty-text">Chưa có chi phí nào</div>';
     return;
   }
   let html = "";
   appData.recent.expenses.forEach(name => {
     if (name) {
-      html += `<button class="recent-btn" onclick="selectExpenseRecent('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+      html += `<button class="recent-btn" onclick="selectExpenseRecent('${name.replace(/'/g, "\\'")}')">📦 ${name}</button>`;
     }
   });
   recentExpenseWrap.innerHTML = html;
 }
 
-// Sửa hàm renderRecentCustomers
-function renderRecentCustomers(){
+function renderRecentCustomers() {
   if (!recentCustomerWrap) return;
-  if (!appData || !appData.recent || !appData.recent.customers) {
-    recentCustomerWrap.innerHTML = '';
+  if (!appData || !appData.recent || !appData.recent.customers || appData.recent.customers.length === 0) {
+    recentCustomerWrap.innerHTML = '<div class="empty-text">Chưa có khách hàng</div>';
     return;
   }
   let html = "";
   appData.recent.customers.forEach(name => {
     if (name) {
-      html += `<button class="recent-btn" onclick="selectRecentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+      const debt = calculateCustomerDebt(name);
+      html += `<button class="recent-btn" onclick="selectRecentCustomer('${name.replace(/'/g, "\\'")}')" style="display: flex; justify-content: space-between; width: 100%;">
+        <span>👤 ${name}</span>
+        <span style="color: var(--danger);">${debt > 0 ? formatMoney(debt) : '✅'}</span>
+      </button>`;
     }
   });
   recentCustomerWrap.innerHTML = html;
 }
 
-// Sửa hàm renderRecentPayments
-function renderRecentPayments(){
+function renderRecentPayments() {
   if (!recentPaymentWrap) return;
-  if (!appData || !appData.recent || !appData.recent.customers) {
-    recentPaymentWrap.innerHTML = '';
+  if (!appData || !appData.recent || !appData.recent.customers || appData.recent.customers.length === 0) {
+    recentPaymentWrap.innerHTML = '<div class="empty-text">Chưa có khách nợ</div>';
     return;
   }
   let html = "";
   appData.recent.customers.forEach(name => {
     if (!name) return;
     const debt = calculateCustomerDebt(name);
-    if(debt <= 0) return;
-    html += `<button class="recent-btn" onclick="selectPaymentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+    if (debt <= 0) return;
+    html += `<button class="recent-btn" onclick="selectPaymentCustomer('${name.replace(/'/g, "\\'")}')" style="display: flex; justify-content: space-between; width: 100%;">
+      <span>👤 ${name}</span>
+      <span style="color: var(--danger);">${formatMoney(debt)}</span>
+    </button>`;
   });
   recentPaymentWrap.innerHTML = html;
 }
 
-// Sửa hàm loadTodayData
-function loadTodayData(){
+// ========== SELECT RECENT ==========
+function selectExpenseRecent(name) {
+  selectedExpenseName = name;
+  if (newExpenseInput) newExpenseInput.classList.add("hidden");
+  if (newExpenseName) newExpenseName.value = "";
+  expenseAmount.focus();
+  showToast(`✓ Đã chọn: ${name}`);
+}
+
+function selectRecentCustomer(name) {
+  selectedCustomerName = name;
+  if (newCustomerInput) newCustomerInput.classList.add("hidden");
+  if (newCustomerName) newCustomerName.value = "";
+  debtAmount.focus();
+  showToast(`✓ Đã chọn: ${name}`);
+}
+
+function selectPaymentCustomer(name) {
+  paymentCustomer.value = name;
+  // Đóng dropdown nếu đang mở
+  const paymentDropdown = document.getElementById("paymentDropdown");
+  if (paymentDropdown) paymentDropdown.classList.add("hidden");
+  updatePaymentInfo();
+  paymentAmount.focus();
+}
+
+// ========== LOAD TODAY DATA ==========
+function loadTodayData() {
   if (!appData) {
     console.error("appData chưa sẵn sàng");
     return;
@@ -127,30 +161,27 @@ function loadTodayData(){
   if (dayStatus) dayStatus.innerHTML = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
 }
 
+// ========== AUTO SAVE REPORT ==========
 function autoSaveReport() {
   const date = getCurrentDate();
   const today = getToday();
-  
-  // Nếu là ngày hôm nay, luôn cho sửa
+
   if (date === today) {
     doSaveReport();
     return;
   }
-  
-  // Ngày cũ: kiểm tra
+
   const report = getReport(date);
-  
+
   if (report.status === "completed") {
-    // Ngày cũ đã chốt: chỉ admin mới được sửa
     if (window.isAdminSync && window.isAdminSync()) {
       doSaveReport();
       showToast("⚡ Bạn đang sửa ngày đã chốt (Quyền Quản lý)");
     } else {
-      loadTodayData(); // Khôi phục giá trị cũ
+      loadTodayData();
       showToast("⚠️ Ngày đã chốt, chỉ Quản lý mới được sửa!");
     }
   } else {
-    // Ngày cũ chưa chốt: nhân viên vẫn được sửa
     doSaveReport();
   }
 }
@@ -168,15 +199,15 @@ function doSaveReport() {
 }
 
 [bankInput, cashInput, reserveInput].forEach(input => {
-  input.addEventListener("input", autoSaveReport);
+  if (input) input.addEventListener("input", autoSaveReport);
 });
 
-function checkMissingReport(){
+function checkMissingReport() {
   const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate()-1);
+  yesterday.setDate(yesterday.getDate() - 1);
   const date = yesterday.toISOString().split("T")[0];
   const report = appData.reports[date];
-  if(!report || report.status !== "completed"){
+  if (!report || report.status !== "completed") {
     alert("⚠️ Hôm qua chưa chốt báo cáo");
   }
 }
@@ -190,316 +221,714 @@ completeDayBtn.onclick = () => {
   showToast("✓ Đã chốt ngày");
 };
 
-// ========== EXPENSE ==========
+// ========== EXPENSE FAB ==========
 expenseFab.onclick = () => {
   editingExpenseId = null;
   expensePopupTitle.innerText = "Thêm Chi Phí";
   renderRecentExpenses();
-  expenseSmartPanel.classList.add("hidden");
-  expenseDisplay.innerText = expenseName.value || "Chọn nguyên liệu";
+  selectedExpenseName = "";
+  if (newExpenseName) newExpenseName.value = "";
+  if (newExpenseInput) newExpenseInput.classList.add("hidden");
   openPopup("expensePopup");
+  setTimeout(() => {
+    if (expenseAmount) expenseAmount.focus();
+  }, 100);
 };
 
+// ========== EXPENSE - THÊM MỚI ==========
+// Expense - Thêm mới bằng prompt
+if (addNewExpenseBtn) {
+  addNewExpenseBtn.onclick = () => {
+    const newName = prompt('📝 Nhập tên nguyên liệu mới:', '');
+    if (newName && newName.trim()) {
+      const name = newName.trim();
+      selectedExpenseName = name;
+      // Thêm vào danh sách recent
+      if (!appData.recent.expenses.includes(name)) {
+        appData.recent.expenses.unshift(name);
+        appData.recent.expenses = appData.recent.expenses.slice(0, 10);
+      }
+      if (!appData.categories.expenses.includes(name)) {
+        appData.categories.expenses.push(name);
+      }
+      saveData();
+      renderRecentExpenses();
+      expenseAmount.focus();
+      showToast(`✓ Đã thêm và chọn: ${name}`);
+    }
+  };
+}
+
+if (newExpenseName) {
+  newExpenseName.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const name = newExpenseName.value.trim();
+      if (name) {
+        selectedExpenseName = name;
+        newExpenseInput.classList.add("hidden");
+        newExpenseName.value = "";
+        expenseAmount.focus();
+        showToast(`✓ Đã thêm mới: ${name}`);
+      }
+    }
+  });
+}
+
+// ========== SAVE EXPENSE ==========
 saveExpenseBtn.onclick = () => {
   const date = getCurrentDate();
   const today = getToday();
-  
-  if(date !== today){
+
+  if (date !== today) {
     const report = getReport(date);
-    if(report.status !== "completed"){
+    if (report.status !== "completed") {
       alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
       return;
     }
   }
-  
+
+  const name = selectedExpenseName;
   const qty = parseMoney(expenseQty.value);
   const amount = parseMoney(expenseAmount.value);
-  
-  if(qty < 0){ alert("Số lượng không thể âm"); return; }
-  if(amount <= 0){ alert("Nhập số tiền"); return; }
-  if(!expenseName.value.trim()){ alert("Nhập tên"); return; }
-  
+
+  if (qty < 0) { alert("Số lượng không thể âm"); return; }
+  if (amount <= 0) { alert("Nhập số tiền"); return; }
+  if (!name) { alert("Vui lòng chọn hoặc thêm tên nguyên liệu"); return; }
+
   const data = {
     id: editingExpenseId || createId("exp"),
     date: date,
-    name: expenseName.value,
+    name: name,
     qty: qty,
     amount: amount,
     deleted: false
   };
-  
-  if(editingExpenseId){
+
+  if (editingExpenseId) {
     const oldItem = appData.expenses.find(x => x.id === editingExpenseId);
-    if(!isEditable(oldItem.date)){
+    if (!isEditable(oldItem.date)) {
       alert("⚠️ Ngày này đã chốt, không thể sửa!");
       return;
     }
     const index = appData.expenses.findIndex(x => x.id === editingExpenseId);
     appData.expenses[index] = data;
-  }else{
+  } else {
     appData.expenses.push(data);
   }
-  
-  addCategory("expenses", data.name);
-  addRecent("expenses", data.name);
+
+  addCategory("expenses", name);
+  addRecent("expenses", name);
   saveData();
-  if(typeof renderManagerDashboard === 'function') renderManagerDashboard();
+  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
   loadTodayData();
   renderRecentExpenses();
   showToast("✓ Đã lưu chi phí");
-  
+
+  // Reset
   expenseAmount.value = "";
   expenseQty.value = "";
+  selectedExpenseName = "";
+  if (newExpenseName) newExpenseName.value = "";
+  if (newExpenseInput) newExpenseInput.classList.add("hidden");
   expenseAmount.focus();
 };
 
-// ========== DEBT ==========
+// ========== DEBT FAB ==========
 debtFab.onclick = () => {
   editingDebtId = null;
   debtPopupTitle.innerText = "Thêm Công Nợ";
   renderRecentCustomers();
-  customerSmartPanel.classList.add("hidden");
-  customerDisplay.innerText = debtCustomer.value || "Chọn khách";
+  selectedCustomerName = "";
+  if (newCustomerName) newCustomerName.value = "";
+  if (newCustomerInput) newCustomerInput.classList.add("hidden");
   openPopup("debtPopup");
+  setTimeout(() => {
+    if (debtAmount) debtAmount.focus();
+  }, 100);
 };
 
+// Debt - Thêm mới bằng prompt
+if (addNewCustomerBtn) {
+  addNewCustomerBtn.onclick = () => {
+    const newName = prompt('📝 Nhập tên khách hàng mới:', '');
+    if (newName && newName.trim()) {
+      const name = newName.trim();
+      selectedCustomerName = name;
+      // Thêm vào danh sách recent
+      if (!appData.recent.customers.includes(name)) {
+        appData.recent.customers.unshift(name);
+        appData.recent.customers = appData.recent.customers.slice(0, 10);
+      }
+      if (!appData.categories.customers.includes(name)) {
+        appData.categories.customers.push(name);
+      }
+      saveData();
+      renderRecentCustomers();
+      renderRecentPayments();
+      debtAmount.focus();
+      showToast(`✓ Đã thêm và chọn: ${name}`);
+    }
+  };
+}
+
+if (newCustomerName) {
+  newCustomerName.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+      const name = newCustomerName.value.trim();
+      if (name) {
+        selectedCustomerName = name;
+        newCustomerInput.classList.add("hidden");
+        newCustomerName.value = "";
+        debtAmount.focus();
+        showToast(`✓ Đã thêm mới: ${name}`);
+      }
+    }
+  });
+}
+
+// ========== SAVE DEBT ==========
 saveDebtBtn.onclick = () => {
   const date = getCurrentDate();
   const today = getToday();
-  
-  if(date !== today){
+
+  if (date !== today) {
     const report = getReport(date);
-    if(report.status !== "completed"){
+    if (report.status !== "completed") {
       alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
       return;
     }
   }
-  
+
+  const customer = selectedCustomerName;
   const amount = parseMoney(debtAmount.value);
-  if(amount <= 0){ alert("Nhập số tiền"); return; }
-  if(!debtCustomer.value.trim()){ alert("Nhập tên khách"); return; }
-  
+  const note = debtNote.value;
+
+  if (amount <= 0) { alert("Nhập số tiền"); return; }
+  if (!customer) { alert("Vui lòng chọn hoặc thêm tên khách hàng"); return; }
+
   const data = {
     id: editingDebtId || createId("debt"),
     type: "debt_add",
-    customer: debtCustomer.value,
+    customer: customer,
     amount: amount,
-    note: debtNote.value,
+    note: note,
     date: date,
     deleted: false
   };
-  
-  if(editingDebtId){
+
+  if (editingDebtId) {
     const oldItem = appData.debtTransactions.find(x => x.id === editingDebtId);
-    if(!isEditable(oldItem.date)){
+    if (!isEditable(oldItem.date)) {
       alert("⚠️ Ngày này đã chốt, không thể sửa!");
       return;
     }
     const index = appData.debtTransactions.findIndex(x => x.id === editingDebtId);
     appData.debtTransactions[index] = data;
-  }else{
+  } else {
     appData.debtTransactions.push(data);
   }
-  
-  addCategory("customers", data.customer);
-  addRecent("customers", data.customer);
+
+  addCategory("customers", customer);
+  addRecent("customers", customer);
   saveData();
-  if(typeof renderManagerDashboard === 'function') renderManagerDashboard();
+  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
   loadTodayData();
   renderRecentCustomers();
   showToast("✓ Đã lưu công nợ");
-  
+
+  // Reset
   debtAmount.value = "";
   debtNote.value = "";
+  selectedCustomerName = "";
+  if (newCustomerName) newCustomerName.value = "";
+  if (newCustomerInput) newCustomerInput.classList.add("hidden");
   debtAmount.focus();
 };
 
-// ========== PAYMENT ==========
+// ========== PAYMENT FAB ==========
 paymentFab.onclick = () => {
   renderRecentPayments();
-  paymentSmartPanel.classList.add("hidden");
-  paymentDisplay.innerText = paymentCustomer.value || "Chọn khách";
+  if (paymentCustomer) paymentCustomer.value = "";
   updatePaymentInfo();
   openPopup("paymentPopup");
+  setTimeout(() => {
+    if (paymentCustomer) paymentCustomer.focus();
+  }, 100);
 };
+
+function updatePaymentInfo() {
+  const customer = paymentCustomer ? paymentCustomer.value.trim() : "";
+  if (!customer) {
+    if (paymentTotalDebt) paymentTotalDebt.innerText = formatMoney(0);
+    if (paymentRemainDebt) paymentRemainDebt.innerText = formatMoney(0);
+    return;
+  }
+  const debt = calculateCustomerDebt(customer);
+  const paymentValue = parseMoney(paymentAmount ? paymentAmount.value : "0");
+  const remain = debt - paymentValue;
+  if (paymentTotalDebt) paymentTotalDebt.innerText = formatMoney(debt);
+  if (paymentRemainDebt) paymentRemainDebt.innerText = formatMoney(remain > 0 ? remain : 0);
+  
+  // Đổi màu nếu còn lại = 0 (hết nợ)
+  if (paymentRemainDebt) {
+    if (remain === 0) {
+      paymentRemainDebt.style.color = "#2c8c5c";
+    } else if (remain < 0) {
+      paymentRemainDebt.style.color = "#c73a2b";
+    } else {
+      paymentRemainDebt.style.color = "inherit";
+    }
+  }
+}
 
 savePaymentBtn.onclick = () => {
   const date = getCurrentDate();
   const today = getToday();
-  
-  if(date !== today){
+  const customer = paymentCustomer ? paymentCustomer.value.trim() : selectedPaymentCustomer;
+
+  if (date !== today) {
     const report = getReport(date);
-    if(report.status !== "completed"){
+    if (report.status !== "completed") {
       alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
       return;
     }
   }
-  
+
   const amount = parseMoney(paymentAmount.value);
-  if(amount <= 0){ alert("Nhập số tiền"); return; }
-  if(!paymentCustomer.value.trim()){ alert("Chọn khách"); return; }
-  
-  const remain = calculateCustomerDebt(paymentCustomer.value) - amount;
-  if(remain < 0){ alert("Thanh toán vượt nợ"); return; }
-  
+  if (amount <= 0) { alert("Nhập số tiền"); return; }
+  if (!customer) { alert("Vui lòng chọn khách hàng"); return; }
+
+  const currentDebt = calculateCustomerDebt(customer);
+  if (amount > currentDebt) { 
+    alert(`⚠️ Thanh toán vượt nợ! Số tiền tối đa: ${formatMoney(currentDebt)}`);
+    return; 
+  }
+
+  // Lưu giao dịch
   appData.debtTransactions.push({
     id: createId("pay"),
     type: "payment",
-    customer: paymentCustomer.value,
+    customer: customer,
     amount: amount,
     method: paymentMethod.value,
     date: date,
     deleted: false
   });
-  
-  addCategory("customers", paymentCustomer.value);
-  addRecent("customers", paymentCustomer.value);
+
+  addCategory("customers", customer);
+  addRecent("customers", customer);
   saveData();
-  if(typeof renderManagerDashboard === 'function') renderManagerDashboard();
+  
+  // Cập nhật UI
+  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
   loadTodayData();
   renderRecentPayments();
-  showToast("✓ Đã thanh toán");
+  renderCustomerDebtList();
   
-  paymentAmount.value = "";
-  paymentAmount.focus();
+  // Cập nhật lại thông tin nợ (vẫn giữ tên khách)
   updatePaymentInfo();
-};
-
-// Kiểm tra quyền sửa/xóa ngày cũ đã chốt
-async function canModifyOldData() {
-  const isAdminUser = await isAdmin();
-  return isAdminUser; // Chỉ admin mới được sửa/xóa ngày cũ đã chốt
-}
-
-function editExpense(id) {
-  const item = appData.expenses.find(x => x.id === id);
   
-  if (!item) {
-    showToast("❌ Không tìm thấy chi phí");
-    return;
+  // Reset số tiền nhưng GIỮ TÊN KHÁCH
+  paymentAmount.value = "";
+  
+  // Hiển thị thông báo
+  const newDebt = calculateCustomerDebt(customer);
+  if (newDebt === 0) {
+    showToast(`🎉 Đã thanh toán HẾT NỢ cho ${customer}!`);
+    // Có thể xóa tên khách khỏi danh sách recent payment nếu muốn
+    renderRecentPayments();
+  } else {
+    showToast(`✓ Đã thanh toán ${formatMoney(amount)}. Còn nợ: ${formatMoney(newDebt)}`);
   }
   
+  // Focus vào ô số tiền để nhập tiếp
+  paymentAmount.focus();
+};
+
+// ========== NÚT THANH TOÁN NHANH ==========
+document.querySelectorAll(".quick-money-btn").forEach(btn => {
+  btn.onclick = () => expenseAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
+});
+
+document.querySelectorAll(".quick-debt-btn").forEach(btn => {
+  btn.onclick = () => debtAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
+});
+
+document.querySelectorAll(".quick-payment-btn").forEach(btn => {
+  btn.onclick = () => {
+    const amount = parseInt(btn.getAttribute('data-amount'));
+    if (!isNaN(amount) && paymentAmount) {
+      paymentAmount.value = amount.toLocaleString("vi-VN");
+      updatePaymentInfo();
+      paymentAmount.focus();
+    }
+  };
+});
+
+const fullPaymentBtn = document.querySelector('.btn-full-payment');
+if (fullPaymentBtn) {
+  fullPaymentBtn.onclick = () => {
+    const customer = paymentCustomer ? paymentCustomer.value.trim() : "";
+    if (!customer) {
+      alert("⚠️ Vui lòng chọn khách hàng");
+      return;
+    }
+    const debt = calculateCustomerDebt(customer);
+    if (debt <= 0) {
+      alert("✅ Khách hàng không có nợ");
+      return;
+    }
+    if (paymentAmount) {
+      paymentAmount.value = debt.toLocaleString("vi-VN");
+      updatePaymentInfo();
+      paymentAmount.focus();
+      showToast(`💰 Đã điền ${formatMoney(debt)}`);
+    }
+  };
+}
+
+// ========== ENTER SAVE ==========
+expenseAmount.addEventListener("keydown", (e) => { if (e.key === "Enter") saveExpenseBtn.click(); });
+debtAmount.addEventListener("keydown", (e) => { if (e.key === "Enter") saveDebtBtn.click(); });
+paymentAmount.addEventListener("keydown", (e) => { if (e.key === "Enter") savePaymentBtn.click(); });
+
+// ========== DRAFT ==========
+if (newExpenseName) {
+  newExpenseName.addEventListener("input", () => localStorage.setItem("expenseDraft", JSON.stringify({
+    name: newExpenseName.value, qty: expenseQty.value, amount: expenseAmount.value
+  })));
+}
+[expenseQty, expenseAmount].forEach(input => {
+  if (input) {
+    input.addEventListener("input", () => localStorage.setItem("expenseDraft", JSON.stringify({
+      name: newExpenseName?.value || selectedExpenseName, qty: expenseQty.value, amount: expenseAmount.value
+    })));
+  }
+});
+
+if (newCustomerName) {
+  newCustomerName.addEventListener("input", () => localStorage.setItem("debtDraft", JSON.stringify({
+    customer: newCustomerName.value, amount: debtAmount.value, note: debtNote.value
+  })));
+}
+[debtAmount, debtNote].forEach(input => {
+  if (input) {
+    input.addEventListener("input", () => localStorage.setItem("debtDraft", JSON.stringify({
+      customer: newCustomerName?.value || selectedCustomerName, amount: debtAmount.value, note: debtNote.value
+    })));
+  }
+});
+
+[paymentCustomer, paymentAmount].forEach(input => {
+  if (input) {
+    input.addEventListener("input", () => localStorage.setItem("paymentDraft", JSON.stringify({
+      customer: paymentCustomer.value, amount: paymentAmount.value
+    })));
+  }
+});
+
+function loadExpenseDraft() {
+  const draft = JSON.parse(localStorage.getItem("expenseDraft"));
+  if (!draft) return;
+  if (draft.name && newExpenseName) newExpenseName.value = draft.name;
+  if (expenseQty) expenseQty.value = draft.qty || "";
+  if (expenseAmount) expenseAmount.value = draft.amount || "";
+}
+
+function loadDebtDraft() {
+  const draft = JSON.parse(localStorage.getItem("debtDraft"));
+  if (!draft) return;
+  if (draft.customer && newCustomerName) newCustomerName.value = draft.customer;
+  if (debtAmount) debtAmount.value = draft.amount || "";
+  if (debtNote) debtNote.value = draft.note || "";
+}
+
+function loadPaymentDraft() {
+  const draft = JSON.parse(localStorage.getItem("paymentDraft"));
+  if (!draft) return;
+  if (paymentCustomer) paymentCustomer.value = draft.customer || "";
+  if (paymentAmount) paymentAmount.value = draft.amount || "";
+  updatePaymentInfo();
+}
+
+// ========== XEM CHI TIẾT CHI PHÍ HÔM NAY (ở tab Nhân Viên) ==========
+// ========== XEM CHI TIẾT CHI PHÍ HÔM NAY ==========
+openExpenseHistory.onclick = (e) => {
+  e.stopPropagation();
+  
+  const date = getCurrentDate();
+  console.log("Đang xem chi phí ngày:", date); // Debug
+  
+  let html = "";
+  const list = appData.expenses.filter(x => x.date === date && !x.deleted);
+  
+  detailTitle.innerText = `📋 Chi Phí Ngày ${formatDisplayDate(date)}`;
+  
+  if (list.length === 0) {
+    html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí</div>';
+  } else {
+    list.forEach(item => {
+      html += `
+        <div class="history-item">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>📦 ${item.name}</strong>
+            <span style="color: var(--danger); font-weight: 600;">${formatMoney(item.amount)}</span>
+          </div>
+          ${item.qty ? `<div style="font-size: 13px; color: var(--text-light);">📊 Số lượng: ${item.qty}</div>` : ''}
+          <div class="action-row" style="margin-top: 10px;">
+            <button class="action-btn edit-btn" onclick="editExpense('${item.id}')">✏️ Sửa</button>
+            <button class="action-btn delete-btn" onclick="deleteExpense('${item.id}')">🗑️ Xóa</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  
+  detailContent.innerHTML = html;
+  openPopup("detailPopup");
+};
+
+// ========== XEM CHI TIẾT CÔNG NỢ PHÁT SINH HÔM NAY ==========
+openDebtHistory.onclick = (e) => {
+  e.stopPropagation();
+  
+  const date = getCurrentDate();
+  console.log("Đang xem công nợ ngày:", date); // Debug
+  
+  let html = "";
+  const list = appData.debtTransactions.filter(x => x.date === date && !x.deleted);
+  
+  detailTitle.innerText = `🧾 Công Nợ Phát Sinh Ngày ${formatDisplayDate(date)}`;
+  
+  if (list.length === 0) {
+    html = '<div class="empty-text">📭 Chưa có công nợ phát sinh</div>';
+  } else {
+    list.forEach(item => {
+      const isDebt = item.type === "debt_add";
+      html += `
+        <div class="history-item">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong>${isDebt ? "🧾 Công nợ" : "💰 Thanh toán"}</strong>
+            <span style="color: ${isDebt ? 'var(--danger)' : 'var(--success)'}; font-weight: 600;">
+              ${isDebt ? "+" : "-"} ${formatMoney(item.amount)}
+            </span>
+          </div>
+          <div style="margin-top: 6px;">👤 ${item.customer}</div>
+          ${item.note ? `<div style="font-size: 13px; color: var(--text-light);">📝 ${item.note}</div>` : ''}
+          <div class="action-row" style="margin-top: 10px;">
+            <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">✏️ Sửa</button>
+            <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">🗑️ Xóa</button>
+          </div>
+        </div>
+      `;
+    });
+  }
+  
+  detailContent.innerHTML = html;
+  openPopup("detailPopup");
+};
+
+
+
+// ========== DATE NAVIGATION ==========
+prevDateBtn.onclick = () => {
+  const d = new Date(reportDate.value);
+  d.setDate(d.getDate() - 1);
+  reportDate.value = d.toISOString().split("T")[0];
+  loadTodayData();
+};
+
+nextDateBtn.onclick = () => {
+  const d = new Date(reportDate.value);
+  d.setDate(d.getDate() + 1);
+  reportDate.value = d.toISOString().split("T")[0];
+  loadTodayData();
+};
+
+// ========== DANH SÁCH CÔNG NỢ KHÁCH HÀNG ==========
+function renderCustomerDebtList() {
+  const container = document.getElementById('customerDebtList');
+  if (!container) return;
+
+  if (!appData || !appData.categories || !appData.categories.customers) {
+    container.innerHTML = '<div class="empty-text">Chưa có dữ liệu</div>';
+    return;
+  }
+
+  const allCustomers = new Set();
+  appData.categories.customers.forEach(c => allCustomers.add(c));
+  appData.recent.customers.forEach(c => allCustomers.add(c));
+  appData.debtTransactions.forEach(t => {
+    if (!t.deleted && t.customer) allCustomers.add(t.customer);
+  });
+
+  const customersWithDebt = [];
+  allCustomers.forEach(customer => {
+    const debt = calculateCustomerDebt(customer);
+    if (debt > 0) {
+      customersWithDebt.push({ name: customer, debt: debt });
+    }
+  });
+
+  customersWithDebt.sort((a, b) => b.debt - a.debt);
+
+  if (customersWithDebt.length === 0) {
+    container.innerHTML = '<div class="empty-text">✅ Không có khách nợ</div>';
+    return;
+  }
+
+  let html = '';
+  customersWithDebt.forEach(customer => {
+    html += `
+      <div class="debt-item" onclick="showCustomerDebtDetail('${customer.name.replace(/'/g, "\\'")}')">
+        <div class="debt-info">
+          <span class="debt-name">👤 ${customer.name}</span>
+        </div>
+        <div class="debt-badge">Nợ ${formatMoney(customer.debt)}</div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function showCustomerDebtDetail(customerName) {
+  const transactions = appData.debtTransactions
+    .filter(t => !t.deleted && t.customer === customerName)
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  let balance = 0;
+  let transactionHtml = '';
+
+  transactions.forEach(t => {
+    if (t.type === 'debt_add') {
+      balance += t.amount;
+      transactionHtml += `
+        <div class="debt-transaction-item add">
+          <div class="debt-transaction-date">📅 ${t.date}</div>
+          <div class="debt-transaction-amount add">+ ${formatMoney(t.amount)}</div>
+          <div class="debt-transaction-note">${t.note ? t.note.substring(0, 20) : 'Công nợ'}</div>
+        </div>
+      `;
+    } else {
+      balance -= t.amount;
+      transactionHtml += `
+        <div class="debt-transaction-item payment">
+          <div class="debt-transaction-date">📅 ${t.date}</div>
+          <div class="debt-transaction-amount payment">- ${formatMoney(t.amount)}</div>
+          <div class="debt-transaction-note">${t.method === 'TM' ? '💵 Tiền mặt' : '🏦 Chuyển khoản'}</div>
+        </div>
+      `;
+    }
+  });
+
+  const totalDebt = calculateCustomerDebt(customerName);
+
+  const popupHtml = `
+    <div class="debt-detail-summary">
+      <div class="debt-detail-total">${formatMoney(totalDebt)}</div>
+      <div class="debt-detail-label">Tổng nợ còn lại</div>
+    </div>
+    <div class="debt-transaction-list">
+      ${transactionHtml || '<div class="empty-text">Chưa có giao dịch</div>'}
+    </div>
+    <div class="debt-detail-actions">
+      <button class="primary-btn btn-payment" onclick="quickPaymentFromDebt('${customerName.replace(/'/g, "\\'")}')">💰 Thanh toán ngay</button>
+      <button class="close-btn" onclick="closePopup('debtDetailPopup')">Đóng</button>
+    </div>
+  `;
+
+  let debtDetailPopup = document.getElementById('debtDetailPopup');
+  if (!debtDetailPopup) {
+    debtDetailPopup = document.createElement('div');
+    debtDetailPopup.id = 'debtDetailPopup';
+    debtDetailPopup.className = 'popup hidden';
+    debtDetailPopup.innerHTML = `
+      <div class="popup-content">
+        <div class="popup-header">
+          <h2>📋 ${customerName}</h2>
+          <button class="close-btn" onclick="closePopup('debtDetailPopup')">✕</button>
+        </div>
+        <div class="popup-body" id="debtDetailBody"></div>
+      </div>
+    `;
+    document.body.appendChild(debtDetailPopup);
+  }
+
+  const body = document.getElementById('debtDetailBody');
+  if (body) body.innerHTML = popupHtml;
+
+  openPopup('debtDetailPopup');
+}
+
+function quickPaymentFromDebt(customerName) {
+  closePopup('debtDetailPopup');
+  if (paymentCustomer) {
+    paymentCustomer.value = customerName;
+    updatePaymentInfo();
+  }
+  openPopup('paymentPopup');
+  setTimeout(() => {
+    if (paymentAmount) paymentAmount.focus();
+  }, 100);
+}
+
+const refreshBtn = document.getElementById('refreshDebtList');
+if (refreshBtn) {
+  refreshBtn.onclick = () => {
+    renderCustomerDebtList();
+    showToast("✓ Đã cập nhật danh sách công nợ");
+  };
+}
+
+
+
+// ========== EDIT/DELETE FUNCTIONS ==========
+function editExpense(id) {
+  const item = appData.expenses.find(x => x.id === id);
+  if (!item) { showToast("❌ Không tìm thấy chi phí"); return; }
+
   const today = getToday();
   const isToday = (item.date === today);
   const report = getReport(item.date);
   const isCompleted = (report.status === "completed");
-  
-  // Kiểm tra quyền sửa
-  let canEdit = false;
-  let errorMsg = "";
-  
-  if (isToday) {
-    // Ngày hôm nay: LUÔN được sửa (kể cả đã chốt)
-    canEdit = true;
-  } else {
-    // Ngày cũ
-    if (isCompleted) {
-      // Ngày cũ đã chốt: chỉ Quản lý mới được sửa
-      if (window.isAdminSync && window.isAdminSync()) {
-        canEdit = true;
-        errorMsg = "";
-      } else {
-        canEdit = false;
-        errorMsg = "⚠️ Ngày này đã chốt, chỉ Quản lý mới được sửa!";
-      }
-    } else {
-      // Ngày cũ chưa chốt: Nhân viên vẫn được sửa
-      canEdit = true;
-    }
-  }
-  
-  // Nếu không có quyền, báo lỗi và thoát
-  if (!canEdit) {
-    if (errorMsg) {
-      alert(errorMsg);
-    } else {
-      alert("⚠️ Bạn không có quyền sửa chi phí này!");
-    }
+
+  if (!isToday && isCompleted && !(window.isAdminSync && window.isAdminSync())) {
+    alert("⚠️ Ngày này đã chốt, chỉ Quản lý mới được sửa!");
     return;
   }
-  
-  // Set editing state
+
   editingExpenseId = id;
   expensePopupTitle.innerText = "Sửa Chi Phí";
-  expenseName.value = item.name;
+  selectedExpenseName = item.name;
   expenseQty.value = item.qty ? item.qty.toLocaleString("vi-VN") : "";
   expenseAmount.value = item.amount.toLocaleString("vi-VN");
-  
-  // Hiển thị thông báo nếu đang sửa ngày cũ đã chốt (chỉ admin mới thấy)
-  if (!isToday && isCompleted) {
-    showToast("⚡ Bạn đang sửa ngày đã chốt (Quyền Quản lý)");
-  }
-  
-  // Mở popup và đóng popup chi tiết
+  if (newExpenseInput) newExpenseInput.classList.add("hidden");
   openPopup("expensePopup");
   closePopup("detailPopup");
-  
-  // Focus vào ô số tiền
-  setTimeout(() => {
-    expenseAmount.focus();
-  }, 100);
+  setTimeout(() => expenseAmount.focus(), 100);
 }
 
 function deleteExpense(id) {
   const item = appData.expenses.find(x => x.id === id);
-  
-  if (!item) {
-    showToast("❌ Không tìm thấy chi phí");
-    return;
-  }
-  
+  if (!item) { showToast("❌ Không tìm thấy chi phí"); return; }
+
   const today = getToday();
   const isToday = (item.date === today);
   const report = getReport(item.date);
   const isCompleted = (report.status === "completed");
-  
-  // Kiểm tra quyền xóa
-  let canDelete = false;
-  let errorMsg = "";
-  
-  if (isToday) {
-    // Ngày hôm nay: LUÔN được xóa
-    canDelete = true;
-  } else {
-    // Ngày cũ
-    if (isCompleted) {
-      // Ngày cũ đã chốt: chỉ Quản lý mới được xóa
-      if (window.isAdminSync && window.isAdminSync()) {
-        canDelete = true;
-        errorMsg = "";
-      } else {
-        canDelete = false;
-        errorMsg = "⚠️ Ngày này đã chốt, chỉ Quản lý mới được xóa!";
-      }
-    } else {
-      // Ngày cũ chưa chốt: Nhân viên vẫn được xóa
-      canDelete = true;
-    }
-  }
-  
-  if (!canDelete) {
-    if (errorMsg) {
-      alert(errorMsg);
-    } else {
-      alert("⚠️ Bạn không có quyền xóa chi phí này!");
-    }
+
+  if (!isToday && isCompleted && !(window.isAdminSync && window.isAdminSync())) {
+    alert("⚠️ Ngày này đã chốt, chỉ Quản lý mới được xóa!");
     return;
   }
-  
-  // Xác nhận xóa
-  let confirmMsg = `Bạn có chắc muốn xóa chi phí "${item.name}" - ${formatMoney(item.amount)}?`;
-  if (!isToday && isCompleted) {
-    confirmMsg = `⚠️ CẢNH BÁO: Bạn đang xóa dữ liệu ngày ĐÃ CHỐT (${item.date})\n\n` + confirmMsg;
-  }
-  
-  if (confirm(confirmMsg)) {
+
+  if (confirm(`Bạn có chắc muốn xóa chi phí "${item.name}" - ${formatMoney(item.amount)}?`)) {
     item.deleted = true;
     saveData();
-    
     if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
-    if (typeof loadTodayData === 'function') loadTodayData();
-    if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
-    
+    loadTodayData();
+    renderRecentExpenses();
     closePopup("detailPopup");
     showToast("✓ Đã xóa chi phí");
   }
@@ -507,355 +936,147 @@ function deleteExpense(id) {
 
 function editDebt(id) {
   const item = appData.debtTransactions.find(x => x.id === id);
-  
-  if (!item) {
-    showToast("❌ Không tìm thấy công nợ");
-    return;
-  }
-  
+  if (!item) { showToast("❌ Không tìm thấy công nợ"); return; }
+
   const today = getToday();
   const isToday = (item.date === today);
   const report = getReport(item.date);
   const isCompleted = (report.status === "completed");
-  
-  // Kiểm tra quyền sửa
-  let canEdit = false;
-  let errorMsg = "";
-  
-  if (isToday) {
-    canEdit = true;
-  } else {
-    if (isCompleted) {
-      if (window.isAdminSync && window.isAdminSync()) {
-        canEdit = true;
-      } else {
-        canEdit = false;
-        errorMsg = "⚠️ Ngày này đã chốt, chỉ Quản lý mới được sửa!";
-      }
-    } else {
-      canEdit = true;
-    }
-  }
-  
-  if (!canEdit) {
-    if (errorMsg) alert(errorMsg);
-    else alert("⚠️ Bạn không có quyền sửa công nợ này!");
+
+  if (!isToday && isCompleted && !(window.isAdminSync && window.isAdminSync())) {
+    alert("⚠️ Ngày này đã chốt, chỉ Quản lý mới được sửa!");
     return;
   }
-  
+
   editingDebtId = id;
   debtPopupTitle.innerText = "Sửa Công Nợ";
-  debtCustomer.value = item.customer;
+  selectedCustomerName = item.customer;
   debtAmount.value = item.amount.toLocaleString("vi-VN");
   debtNote.value = item.note || "";
-  
-  if (!isToday && isCompleted) {
-    showToast("⚡ Bạn đang sửa ngày đã chốt (Quyền Quản lý)");
-  }
-  
+  if (newCustomerInput) newCustomerInput.classList.add("hidden");
   openPopup("debtPopup");
   closePopup("detailPopup");
-  
-  setTimeout(() => {
-    debtAmount.focus();
-  }, 100);
+  setTimeout(() => debtAmount.focus(), 100);
 }
 
 function deleteDebt(id) {
   const item = appData.debtTransactions.find(x => x.id === id);
-  
-  if (!item) {
-    showToast("❌ Không tìm thấy công nợ");
-    return;
-  }
-  
+  if (!item) { showToast("❌ Không tìm thấy công nợ"); return; }
+
   const today = getToday();
   const isToday = (item.date === today);
   const report = getReport(item.date);
   const isCompleted = (report.status === "completed");
-  
-  // Kiểm tra quyền xóa
-  let canDelete = false;
-  let errorMsg = "";
-  
-  if (isToday) {
-    canDelete = true;
-  } else {
-    if (isCompleted) {
-      if (window.isAdminSync && window.isAdminSync()) {
-        canDelete = true;
-      } else {
-        canDelete = false;
-        errorMsg = "⚠️ Ngày này đã chốt, chỉ Quản lý mới được xóa!";
-      }
-    } else {
-      canDelete = true;
-    }
-  }
-  
-  if (!canDelete) {
-    if (errorMsg) alert(errorMsg);
-    else alert("⚠️ Bạn không có quyền xóa công nợ này!");
+
+  if (!isToday && isCompleted && !(window.isAdminSync && window.isAdminSync())) {
+    alert("⚠️ Ngày này đã chốt, chỉ Quản lý mới được xóa!");
     return;
   }
-  
+
   const typeText = item.type === "debt_add" ? "Công nợ" : "Thanh toán";
-  let confirmMsg = `Bạn có chắc muốn xóa ${typeText} của "${item.customer}" - ${formatMoney(item.amount)}?`;
-  
-  if (!isToday && isCompleted) {
-    confirmMsg = `⚠️ CẢNH BÁO: Bạn đang xóa dữ liệu ngày ĐÃ CHỐT (${item.date})\n\n` + confirmMsg;
-  }
-  
-  if (confirm(confirmMsg)) {
+  if (confirm(`Bạn có chắc muốn xóa ${typeText} của "${item.customer}" - ${formatMoney(item.amount)}?`)) {
     item.deleted = true;
     saveData();
-    
     if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
-    if (typeof loadTodayData === 'function') loadTodayData();
-    
+    loadTodayData();
     closePopup("detailPopup");
     showToast("✓ Đã xóa công nợ");
   }
 }
 
-
-
-function selectExpenseRecent(name){
-  expenseName.value = name;
-  expenseDisplay.innerText = name;
-  expenseSmartPanel.classList.add("hidden");
-  expenseAmount.focus();
-}
-
-
-
-function selectRecentCustomer(name){
-  debtCustomer.value = name;
-  customerDisplay.innerText = name;
-  customerSmartPanel.classList.add("hidden");
-  debtAmount.focus();
-}
-
-
-
-function selectPaymentCustomer(name){
-  paymentCustomer.value = name;
-  paymentDisplay.innerText = name;
-  paymentSmartPanel.classList.add("hidden");
-  updatePaymentInfo();
-  paymentAmount.focus();
-}
-
-function updatePaymentInfo(){
-  const debt = calculateCustomerDebt(paymentCustomer.value);
-  paymentTotalDebt.innerText = formatMoney(debt);
-  const remain = debt - parseMoney(paymentAmount.value);
-  paymentRemainDebt.innerText = formatMoney(remain > 0 ? remain : 0);
-}
-
-// ========== DROPDOWN ==========
-expenseDisplay.onclick = () => expenseSmartPanel.classList.toggle("hidden");
-customerDisplay.onclick = () => customerSmartPanel.classList.toggle("hidden");
-paymentDisplay.onclick = () => paymentSmartPanel.classList.toggle("hidden");
-
-expenseName.addEventListener("input", () => {
-  renderDropdown(expenseName, expenseDropdown, appData.categories.expenses);
-});
-
-debtCustomer.addEventListener("input", renderCustomerDropdown);
-paymentCustomer.addEventListener("input", () => {
-  renderPaymentDropdown();
-  updatePaymentInfo();
-});
-paymentAmount.addEventListener("input", updatePaymentInfo);
-
-function renderCustomerDropdown(){
-  const keyword = debtCustomer.value.trim().toLowerCase();
-  const unique = [...new Set([...appData.recent.customers, ...appData.categories.customers])];
-  let html = "";
-  unique.filter(x => x.toLowerCase().includes(keyword)).slice(0,20).forEach(item => {
-    const debt = calculateCustomerDebt(item);
-    html += `<div class="dropdown-item customer-item"><div>${item}</div><div>${formatMoney(debt)}</div></div>`;
-  });
-  if(keyword && !unique.includes(debtCustomer.value.trim())){
-    html += `<div class="dropdown-item">+ Tạo mới "${debtCustomer.value.trim()}"</div>`;
-  }
-  customerDropdown.innerHTML = html;
-}
-
-function renderPaymentDropdown(){
-  const keyword = paymentCustomer.value.trim().toLowerCase();
-  const customers = [...new Set([...appData.recent.customers, ...appData.categories.customers])];
-  let html = "";
-  customers.filter(x => x.toLowerCase().includes(keyword)).forEach(customer => {
-    const debt = calculateCustomerDebt(customer);
-    if(debt <= 0) return;
-    html += `<div class="dropdown-item customer-item"><div>${customer}</div><div>${formatMoney(debt)}</div></div>`;
-  });
-  paymentDropdown.innerHTML = html;
-}
-
-// ========== CLOSE & NAVIGATION ==========
+// ========== CLOSE POPUPS ==========
 document.querySelectorAll(".close-btn").forEach(btn => {
   btn.onclick = () => closePopup(btn.dataset.close);
 });
 
-expenseDropdown.addEventListener("click", (e) => {
-  if(!e.target.classList.contains("dropdown-item")) return;
-  const text = e.target.innerText.replace('+ Tạo mới "','').replace('"','');
-  expenseName.value = text;
-  expenseDisplay.innerText = text;
-  expenseSmartPanel.classList.add("hidden");
-  expenseAmount.focus();
-});
+// ========== PAYMENT DROPDOWN ==========
+const paymentDropdown = document.getElementById("paymentDropdown");
+if (paymentCustomer) {
+  paymentCustomer.addEventListener("focus", () => {
+    renderPaymentDropdown();
+    if (paymentDropdown) paymentDropdown.classList.remove("hidden");
+  });
 
-customerDropdown.addEventListener("click", (e) => {
-  const item = e.target.closest(".dropdown-item");
-  if(!item) return;
-  const text = item.innerText.split("\n")[0].replace('+ Tạo mới "','').replace('"','').trim();
-  debtCustomer.value = text;
-  customerDisplay.innerText = text;
-  customerSmartPanel.classList.add("hidden");
-  debtAmount.focus();
-});
-
-paymentDropdown.addEventListener("click", (e) => {
-  const item = e.target.closest(".dropdown-item");
-  if(!item) return;
-  const customer = item.innerText.split("\n")[0].trim();
-  paymentCustomer.value = customer;
-  paymentDisplay.innerText = customer;
-  paymentSmartPanel.classList.add("hidden");
-  updatePaymentInfo();
-  paymentAmount.focus();
-});
-
-// ========== QUICK MONEY ==========
-document.querySelectorAll(".quick-money-btn").forEach(btn => {
-  btn.onclick = () => expenseAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
-});
-document.querySelectorAll(".quick-debt-btn").forEach(btn => {
-  btn.onclick = () => debtAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
-});
-document.querySelectorAll(".quick-payment-btn").forEach(btn => {
-  btn.onclick = () => {
-    paymentAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
-    updatePaymentInfo();
-  };
-});
-
-// ========== ENTER SAVE ==========
-expenseAmount.addEventListener("keydown", (e) => { if(e.key === "Enter") saveExpenseBtn.click(); });
-debtAmount.addEventListener("keydown", (e) => { if(e.key === "Enter") saveDebtBtn.click(); });
-paymentAmount.addEventListener("keydown", (e) => { if(e.key === "Enter") savePaymentBtn.click(); });
-
-// ========== DRAFT ==========
-[expenseName, expenseQty, expenseAmount].forEach(input => {
-  input.addEventListener("input", () => localStorage.setItem("expenseDraft", JSON.stringify({
-    name: expenseName.value, qty: expenseQty.value, amount: expenseAmount.value
-  })));
-});
-[debtCustomer, debtAmount, debtNote].forEach(input => {
-  input.addEventListener("input", () => localStorage.setItem("debtDraft", JSON.stringify({
-    customer: debtCustomer.value, amount: debtAmount.value, note: debtNote.value
-  })));
-});
-[paymentCustomer, paymentAmount].forEach(input => {
-  input.addEventListener("input", () => localStorage.setItem("paymentDraft", JSON.stringify({
-    customer: paymentCustomer.value, amount: paymentAmount.value
-  })));
-});
-
-function loadExpenseDraft(){
-  const draft = JSON.parse(localStorage.getItem("expenseDraft"));
-  if(!draft) return;
-  expenseName.value = draft.name || "";
-  expenseQty.value = draft.qty || "";
-  expenseAmount.value = draft.amount || "";
-  if(expenseName.value) expenseDisplay.innerText = expenseName.value;
-}
-function loadDebtDraft(){
-  const draft = JSON.parse(localStorage.getItem("debtDraft"));
-  if(!draft) return;
-  debtCustomer.value = draft.customer || "";
-  debtAmount.value = draft.amount || "";
-  debtNote.value = draft.note || "";
-  if(debtCustomer.value) customerDisplay.innerText = debtCustomer.value;
-}
-function loadPaymentDraft(){
-  const draft = JSON.parse(localStorage.getItem("paymentDraft"));
-  if(!draft) return;
-  paymentCustomer.value = draft.customer || "";
-  paymentAmount.value = draft.amount || "";
-  if(paymentCustomer.value) paymentDisplay.innerText = paymentCustomer.value;
-  updatePaymentInfo();
+  paymentCustomer.addEventListener("input", () => {
+    renderPaymentDropdown();
+    if (paymentDropdown) paymentDropdown.classList.remove("hidden");
+  });
 }
 
-// ========== HISTORY ==========
-openExpenseHistory.onclick = () => {
-  detailTitle.innerText = "Chi Phí Hôm Nay";
-  const date = getCurrentDate();
-  let html = "";
-  const list = appData.expenses.filter(x => x.date === date && !x.deleted);
-  if(list.length === 0){
-    html = '<div class="empty-text">Chưa có dữ liệu</div>';
-  }else{
-    list.forEach(item => {
-      html += `
-        <div class="history-item">
-          <strong>${item.name}</strong><br>
-          ${formatMoney(item.amount)}
-          <div class="action-row">
-            <button class="action-btn edit-btn" onclick="editExpense('${item.id}')">Sửa</button>
-            <button class="action-btn delete-btn" onclick="deleteExpense('${item.id}')">Xóa</button>
-          </div>
-        </div>
-      `;
-    });
+document.addEventListener("click", (e) => {
+  if (paymentCustomer && paymentDropdown) {
+    if (!paymentCustomer.contains(e.target) && !paymentDropdown.contains(e.target)) {
+      paymentDropdown.classList.add("hidden");
+    }
   }
-  detailContent.innerHTML = html;
-  openPopup("detailPopup");
-};
+});
 
-openDebtHistory.onclick = () => {
-  detailTitle.innerText = "Công Nợ Hôm Nay";
-  const date = getCurrentDate();
+function renderPaymentDropdown() {
+  if (!paymentDropdown) return;
+  const keyword = paymentCustomer.value.trim().toLowerCase();
+  const list = [...new Set([...appData.categories.customers, ...appData.recent.customers])];
+
   let html = "";
-  const list = appData.debtTransactions.filter(x => x.date === date && !x.deleted);
-  if(list.length === 0){
-    html = '<div class="empty-text">Chưa có dữ liệu</div>';
-  }else{
-    list.forEach(item => {
-      html += `
-        <div class="history-item">
-          <strong>${item.type === "debt_add" ? "🧾" : "💰"} ${item.customer}</strong><br>
-          ${item.type === "debt_add" ? "+" : "-"} ${formatMoney(item.amount)}
-          <div class="action-row">
-            <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">Sửa</button>
-            <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">Xóa</button>
-          </div>
-        </div>
-      `;
-    });
+  list.filter(x => x.toLowerCase().includes(keyword)).slice(0, 15).forEach(item => {
+    const debt = calculateCustomerDebt(item);
+    if (debt <= 0) return;
+    html += `<div class="dropdown-item" data-value="${item.replace(/'/g, "\\'")}">
+      <div style="display: flex; justify-content: space-between;">
+        <span>👤 ${item}</span>
+        <span style="color: var(--danger);">${formatMoney(debt)}</span>
+      </div>
+    </div>`;
+  });
+
+  if (keyword && !list.includes(keyword)) {
+    html += `<div class="dropdown-item" data-value="${keyword.replace(/'/g, "\\'")}">✨ Thêm mới: ${keyword}</div>`;
   }
-  detailContent.innerHTML = html;
-  openPopup("detailPopup");
-};
 
-// ========== DATE NAVIGATION ==========
-prevDateBtn.onclick = () => {
-  const d = new Date(reportDate.value);
-  d.setDate(d.getDate()-1);
-  reportDate.value = d.toISOString().split("T")[0];
-  loadTodayData();
-};
-nextDateBtn.onclick = () => {
-  const d = new Date(reportDate.value);
-  d.setDate(d.getDate()+1);
-  reportDate.value = d.toISOString().split("T")[0];
-  loadTodayData();
-};
+  paymentDropdown.innerHTML = html;
 
+  paymentDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+    item.onclick = () => {
+      paymentCustomer.value = item.dataset.value;
+      paymentDropdown.classList.add("hidden");
+      updatePaymentInfo();
+      paymentAmount.focus();
+    };
+  });
+}
+// Thêm hàm tính tổng công nợ tất cả khách hàng
+function calculateTotalDebtAll() {
+  const allCustomers = new Set();
+  
+  // Lấy tất cả khách hàng
+  appData.categories.customers.forEach(c => allCustomers.add(c));
+  appData.recent.customers.forEach(c => allCustomers.add(c));
+  appData.debtTransactions.forEach(t => {
+    if (!t.deleted && t.customer) allCustomers.add(t.customer);
+  });
+  
+  let total = 0;
+  allCustomers.forEach(customer => {
+    total += calculateCustomerDebt(customer);
+  });
+  
+  return total;
+}
+
+// Cập nhật hiển thị tổng công nợ
+function updateTotalDebtDisplay() {
+  const totalDebtElement = document.getElementById("totalDebtAll");
+  if (totalDebtElement) {
+    totalDebtElement.innerText = formatMoney(calculateTotalDebtAll());
+  }
+}
+
+// Gọi trong loadTodayData
+const originalLoadTodayData = loadTodayData;
+loadTodayData = function() {
+  originalLoadTodayData();
+  updateTotalDebtDisplay();
+  renderCustomerDebtList();
+};
 // ========== LOAD DRAFTS & INIT ==========
 loadPaymentDraft();
 loadDebtDraft();

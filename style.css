@@ -558,7 +558,22 @@ body {
 .quick-money-btn:hover {
   background: var(--border);
 }
+.btn-full-payment {
+  flex: 1;
+  min-width: 70px;
+  padding: 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
 
+.btn-full-payment:hover {
+  background: var(--border);
+}
 .smart-select {
   position: relative;
   margin-bottom: 12px;
@@ -907,3 +922,406 @@ textarea {
 .tab-btn[data-tab="managerTab"].hidden {
   display: none;
 }
+}
+/* ========== DANH SÁCH CÔNG NỢ KHÁCH HÀNG ========== */
+.customer-debt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.debt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+  border: 1px solid var(--border);
+}
+
+.debt-item:hover {
+  background: var(--border);
+  transform: translateX(2px);
+}
+
+.debt-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debt-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.debt-amount {
+  font-size: 13px;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.debt-amount.positive {
+  color: var(--success);
+}
+
+.debt-badge {
+  font-size: 11px;
+  padding: 4px 8px;
+  background: var(--danger-light);
+  color: var(--danger);
+  border-radius: 20px;
+}
+
+.debt-badge.paid {
+  background: var(--success-light);
+  color: var(--success);
+}
+
+/* Popup chi tiết công nợ */
+.debt-detail-summary {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.debt-detail-total {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--danger);
+  font-family: var(--font-mono);
+}
+
+.debt-detail-total.paid {
+  color: var(--success);
+}
+
+.debt-detail-label {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 4px;
+}
+
+.debt-transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.debt-transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid;
+}
+
+.debt-transaction-item.add {
+  border-left-color: var(--danger);
+}
+
+.debt-transaction-item.payment {
+  border-left-color: var(--success);
+}
+
+.debt-transaction-date {
+  font-size: 12px;
+  color: var(--text-light);
+  min-width: 90px;
+}
+
+.debt-transaction-amount {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.debt-transaction-amount.add {
+  color: var(--danger);
+}
+
+.debt-transaction-amount.payment {
+  color: var(--success);
+}
+
+.debt-transaction-note {
+  font-size: 11px;
+  color: var(--text-light);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debt-detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-payment {
+  flex: 1;
+  background: var(--success);
+  color: white;
+  border: none;
+}
+
+.btn-payment:hover {
+  background: #1e7b4a;
+}
+
+/* ========== THANH TOÁN ========== */
+.payment-info {
+  display: flex;
+  gap: 20px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+
+.payment-info > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 11px;
+  color: var(--text-light);
+  text-transform: uppercase;
+}
+
+.payment-info strong {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.payment-info strong:first-child {
+  color: var(--danger);
+}
+/* Nút outline */
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-outline:active {
+  background: var(--bg-tertiary);
+  transform: scale(0.97);
+}
+
+/* ========== POPUP DETAIL (DÙNG CHUNG) ========== */
+#detailPopup .popup-content,
+#debtDetailPopup .popup-content {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#detailPopup .popup-header,
+#debtDetailPopup .popup-header {
+  flex-shrink: 0;
+}
+
+#detailContent,
+#debtDetailBody {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 20px 0;
+}
+
+/* ========== HISTORY ITEMS (cho detail popup) ========== */
+.history-item {
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.history-item:last-child {
+  margin-bottom: 0;
+}
+
+/* Action buttons trong history item */
+.history-item .action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.history-item .action-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.history-item .edit-btn {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+.history-item .edit-btn:active {
+  background: var(--accent);
+  color: white;
+}
+
+.history-item .delete-btn {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.history-item .delete-btn:active {
+  background: var(--danger);
+  color: white;
+}
+
+/* ========== DEBT DETAIL POPUP (chi tiết công nợ khách) ========== */
+.debt-detail-summary {
+  background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-surface));
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-gold);
+}
+
+.debt-detail-total {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--danger);
+  font-family: var(--font-mono);
+}
+
+.debt-detail-label {
+  font-size: 12px;
+  color: var(--text-light);
+  margin-top: 6px;
+}
+
+.debt-transaction-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 350px;
+  overflow-y: auto;
+  margin-bottom: 16px;
+}
+
+.debt-transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+}
+
+.debt-transaction-item.add {
+  border-left-color: var(--danger);
+}
+
+.debt-transaction-item.payment {
+  border-left-color: var(--success);
+}
+
+.debt-transaction-date {
+  font-size: 12px;
+  color: var(--text-light);
+  min-width: 85px;
+}
+
+.debt-transaction-amount {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.debt-transaction-amount.add {
+  color: var(--danger);
+}
+
+.debt-transaction-amount.payment {
+  color: var(--success);
+}
+
+.debt-transaction-note {
+  font-size: 11px;
+  color: var(--text-light);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debt-detail-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.btn-payment {
+  flex: 1;
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-payment:active {
+  transform: scale(0.97);
+  background: #1e7b4a;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 480px) {
+  .debt-detail-total {
+    font-size: 26px;
+  }
+  
+  .debt-transaction-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .debt-transaction-note {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
