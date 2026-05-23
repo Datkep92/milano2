@@ -133,18 +133,16 @@ async function updateAdminStatus() {
   window.isAdminSync = () => _isAdmin;
 }
 
+// Gọi khi auth state thay đổi
 auth.onAuthStateChanged(async (user) => {
   if (user) {
-    // Đã đăng nhập
-    console.log("User đã đăng nhập:", user.email);
-    await checkFirstUser(user);
-    showApp(user);
+    await updateAdminStatus();
   } else {
-    // Chưa đăng nhập
-    console.log("Chưa đăng nhập");
-    hideApp();
+    _isAdmin = false;
+    window.isAdminSync = () => false;
   }
 });
+
 // Khởi tạo ban đầu
 updateAdminStatus();
 // Export

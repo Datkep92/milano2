@@ -2,292 +2,798 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Quản Lý Cafe</title>
+
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
 <!-- MÀN HÌNH ĐĂNG NHẬP -->
-<div id="loginScreen" class="login-screen login-screen--visible">
+<div id="loginScreen" class="login-screen">
   <div class="login-container">
     <div class="login-header">
-      <div class="logo-icon">☕</div>
-      <h1>Quản Lý Cafe</h1>
+      <h1>☕ Quản Lý Cafe</h1>
       <p>Đăng nhập để tiếp tục</p>
     </div>
 
+    <!-- Form đăng nhập -->
     <div id="loginForm" class="login-form">
-      <input type="email" id="loginEmail" placeholder="Email">
-      <input type="password" id="loginPassword" placeholder="Mật khẩu">
+      <input type="email" id="loginEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="loginPassword" placeholder="Mật khẩu" autocomplete="current-password">
       <div id="loginError" class="error-message"></div>
-      <button id="loginBtn" class="btn-login">Đăng nhập</button>
+      <button id="loginBtn" class="primary-btn">Đăng nhập</button>
       <p class="toggle-link">Chưa có tài khoản? <span id="showRegister">Đăng ký</span></p>
     </div>
 
-    <div id="registerForm" class="login-form hidden-form">
-      <input type="email" id="registerEmail" placeholder="Email">
-      <input type="password" id="registerPassword" placeholder="Mật khẩu">
-      <input type="password" id="registerConfirmPassword" placeholder="Xác nhận">
+    <!-- Form đăng ký (ẩn mặc định) -->
+    <div id="registerForm" class="login-form hidden">
+      <input type="email" id="registerEmail" placeholder="Email" autocomplete="email">
+      <input type="password" id="registerPassword" placeholder="Mật khẩu" autocomplete="new-password">
+      <input type="password" id="registerConfirmPassword" placeholder="Xác nhận mật khẩu" autocomplete="new-password">
       <div id="registerError" class="error-message"></div>
-      <button id="registerBtn" class="btn-login">Đăng ký</button>
+      <button id="registerBtn" class="primary-btn">Đăng ký</button>
       <p class="toggle-link">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></p>
     </div>
   </div>
 </div>
 
-<!-- APP CHÍNH -->
-<div id="appContainer" class="app-container app-container--hidden">
-  
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-left">
-      <span class="header-icon">☕</span>
-      <span class="header-title">Cafe Manager</span>
+<!-- APP CHÍNH (ẩn khi chưa đăng nhập) -->
+<div id="appContainer" class="app hidden">
+  <!-- Nội dung app hiện tại giữ nguyên -->
+  <header class="topbar">
+    <div>
+      <h1>☕ Quản Lý Cafe</h1>
+      <div id="periodLabel"></div>
     </div>
-    <div class="header-right" id="userInfo">
-      <span class="user-name">Đang tải...</span>
+    <div class="user-info">
       <button id="logoutBtn" class="logout-btn">Đăng xuất</button>
     </div>
-  </div>
+  </header>
 
-  <!-- TABS -->
+
+
+  <!-- TAB -->
+
   <div class="tabs">
-    <button class="tab active" data-tab="employee">Nhân viên</button>
-    <button class="tab" data-tab="manager">Quản lý</button>
-  </div>
 
-  <!-- TAB NHÂN VIÊN -->
-  <div id="employeeTab" class="tab-pane active">
-    
-    <div class="card">
-      <div class="date-row">
-        <button id="prevDateBtn" class="icon-btn">◀</button>
-        <input type="date" id="reportDate" class="date-input">
-        <button id="nextDateBtn" class="icon-btn">▶</button>
-      </div>
-      <div class="action-row">
-        <span id="dayStatus" class="status-badge">🟡 Đang nhập</span>
-        <button id="completeDayBtn" class="btn-primary small">Chốt ngày</button>
-      </div>
-    </div>
+    <button class="tab-btn active" data-tab="employeeTab">
+      Nhân Viên
+    </button>
 
-    <div class="card">
-      <div class="card-title">Báo cáo hôm nay</div>
-      <div class="grid-2">
-        <div class="form-field">
-          <label>Chuyển khoản</label>
-          <input type="text" id="bankInput" class="money-input" placeholder="0đ">
-        </div>
-        <div class="form-field">
-          <label>Tiền mặt</label>
-          <input type="text" id="cashInput" class="money-input" placeholder="0đ">
-        </div>
-        <div class="form-field">
-          <label>Tiền gối đầu</label>
-          <input type="text" id="reserveInput" class="money-input" placeholder="0đ">
-        </div>
-        <div class="form-field clickable" id="openExpenseHistory">
-          <label>Tổng chi phí</label>
-          <div class="value-large" id="expenseTotal">0đ</div>
-        </div>
-        <div class="form-field clickable" id="openDebtHistory">
-          <label>Tổng công nợ</label>
-          <div class="value-large" id="debtTotal">0đ</div>
-        </div>
-      </div>
-    </div>
+    <button class="tab-btn" data-tab="managerTab">
+      Quản Lý
+    </button>
 
   </div>
 
-  <!-- TAB QUẢN LÝ -->
-  <div id="managerTab" class="tab-pane">
-    
-    <div class="card">
-      <div class="filter-bar">
-        <button class="filter-btn active" data-mode="period">Kỳ (20→19)</button>
-        <button class="filter-btn" data-mode="month">Tháng</button>
-        <button class="filter-btn" data-mode="day">Ngày</button>
-      </div>
-      <div class="period-nav">
-        <button id="periodPrevBtn" class="icon-btn">◀</button>
-        <div id="periodDisplay" class="period-label">Đang tải...</div>
-        <button id="periodNextBtn" class="icon-btn">▶</button>
-      </div>
-      <div id="datePickerWrapper" class="picker-wrapper hidden-panel">
-        <input type="date" id="managerDatePicker" class="date-input">
-      </div>
-      <div id="monthPickerWrapper" class="picker-wrapper hidden-panel">
-        <input type="month" id="managerMonthPicker" class="date-input">
-      </div>
+
+
+  <!-- EMPLOYEE -->
+
+<!-- EMPLOYEE -->
+<div class="tab-content active" id="employeeTab">
+
+  <!-- CARD 1 -->
+  <div class="card">
+
+    <div class="date-row">
+      <button id="prevDateBtn">◀</button>
+
+      <input type="date" id="reportDate">
+
+      <button id="nextDateBtn">▶</button>
     </div>
 
-    <div class="card">
-      <div class="stats-grid">
-        <div class="stat-box">
-          <label>💰 Chuyển khoản</label>
-          <div class="stat-value" id="managerBank">0đ</div>
-        </div>
-        <div class="stat-box">
-          <label>💵 Tiền mặt</label>
-          <div class="stat-value" id="managerCash">0đ</div>
-        </div>
-        <div class="stat-box">
-          <label>📉 Chi phí</label>
-          <div class="stat-value" id="managerExpense">0đ</div>
-        </div>
-        <div class="stat-box">
-          <label>📊 Công nợ</label>
-          <div class="stat-value" id="managerDebt">0đ</div>
-        </div>
-      </div>
-    </div>
+    <div class="day-complete-row">
 
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">📋 Chi phí</span>
-        <button id="exportExpenseBtn" class="btn-small">Xuất</button>
+      <div class="day-status" id="dayStatus">
+        🟡 Đang nhập
       </div>
-      <div id="managerExpenseList" class="list-container"></div>
-    </div>
 
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">🧾 Công nợ</span>
-        <button id="exportDebtBtn" class="btn-small">Xuất</button>
-      </div>
-      <div id="managerDebtList" class="list-container"></div>
+      <button
+        class="primary-btn"
+        id="completeDayBtn"
+      >
+        CHỐT NGÀY
+      </button>
+
     </div>
 
   </div>
 
-  <!-- FAB BUTTONS -->
-  <div class="fab-group">
-    <button id="expenseFab" class="fab">💸</button>
-    <button id="debtFab" class="fab">🧾</button>
-    <button id="paymentFab" class="fab">💰</button>
+
+
+  <!-- CARD 2 -->
+  <div class="card">
+
+    <h2>Báo Cáo Hôm Nay</h2>
+
+    <div class="summary-grid">
+
+      <div class="summary-item">
+        <label>Chuyển khoản</label>
+        <input type="text" id="bankInput">
+      </div>
+
+      <div class="summary-item">
+        <label>Tiền mặt thực nhận</label>
+        <input type="text" id="cashInput">
+      </div>
+
+      <div class="summary-item">
+        <label>Tiền gối đầu</label>
+        <input type="text" id="reserveInput">
+      </div>
+
+      <div
+        class="summary-item readonly clickable-summary"
+        id="openExpenseHistory"
+      >
+
+        <label>Tổng chi phí</label>
+
+        <div class="big-value" id="expenseTotal">
+          0đ
+        </div>
+
+        <div class="summary-hint">
+          Click xem chi tiết
+        </div>
+
+      </div>
+
+      <div
+        class="summary-item readonly clickable-summary"
+        id="openDebtHistory"
+      >
+
+        <label>Tổng công nợ</label>
+
+        <div class="big-value" id="debtTotal">
+          0đ
+        </div>
+
+        <div class="summary-hint">
+          Click xem chi tiết
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 
 </div>
 
-<!-- ========== POPUPS ========== -->
-<div id="expensePopup" class="popup popup--hidden">
-  <div class="popup-container">
+
+
+<!-- MANAGER -->
+<div class="tab-content" id="managerTab">
+
+  <!-- Bộ lọc -->
+  <div class="card">
+
+    <div class="filter-header">
+
+      <h2>Thống Kê</h2>
+
+      <div class="view-mode-group">
+
+        <button
+          class="view-mode-btn active"
+          data-mode="period"
+        >
+          📅 Kỳ (20→19)
+        </button>
+
+        <button
+          class="view-mode-btn"
+          data-mode="month"
+        >
+          📆 Tháng
+        </button>
+
+        <button
+          class="view-mode-btn"
+          data-mode="day"
+        >
+          📌 Ngày
+        </button>
+
+      </div>
+
+    </div>
+
+    <div class="date-nav">
+
+      <button
+        id="periodPrevBtn"
+        class="nav-btn"
+      >
+        ◀ Trước
+      </button>
+
+      <div
+        class="period-display"
+        id="periodDisplay"
+      >
+        Đang tải...
+      </div>
+
+      <button
+        id="periodNextBtn"
+        class="nav-btn"
+      >
+        Sau ▶
+      </button>
+
+    </div>
+
+    <div
+      class="date-picker-wrapper hidden"
+      id="datePickerWrapper"
+    >
+      <input
+        type="date"
+        id="managerDatePicker"
+      >
+    </div>
+
+    <div
+      class="month-picker-wrapper hidden"
+      id="monthPickerWrapper"
+    >
+      <input
+        type="month"
+        id="managerMonthPicker"
+      >
+    </div>
+
+  </div>
+
+
+
+  <!-- THỐNG KÊ -->
+  <div class="card">
+
+    <h2 id="statsTitle">
+      Tổng Kết Kỳ
+    </h2>
+
+    <div class="manager-grid">
+
+      <div class="manager-box">
+        <label>💰 Chuyển khoản</label>
+        <div class="big-value" id="managerBank">
+          0đ
+        </div>
+      </div>
+
+      <div class="manager-box">
+        <label>💵 Tiền mặt</label>
+        <div class="big-value" id="managerCash">
+          0đ
+        </div>
+      </div>
+
+      <div class="manager-box">
+        <label>📉 Chi phí</label>
+        <div class="big-value" id="managerExpense">
+          0đ
+        </div>
+      </div>
+
+      <div class="manager-box">
+        <label>📊 Công nợ phát sinh</label>
+        <div class="big-value" id="managerDebt">
+          0đ
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- CHI PHÍ -->
+  <div class="card">
+
+    <div class="card-header">
+
+      <h2>📋 Chi Phí</h2>
+
+      <button
+        class="small-btn"
+        id="exportExpenseBtn"
+      >
+        Xuất
+      </button>
+
+    </div>
+
+    <div id="managerExpenseList"></div>
+
+  </div>
+
+
+
+  <!-- CÔNG NỢ -->
+  <div class="card">
+
+    <div class="card-header">
+
+      <h2>🧾 Công Nợ</h2>
+
+      <button
+        class="small-btn"
+        id="exportDebtBtn"
+      >
+        Xuất
+      </button>
+
+    </div>
+
+    <div id="managerDebtList"></div>
+
+  </div>
+
+</div>
+
+<!-- FAB -->
+
+<div class="fab-group">
+
+  <button class="fab" id="expenseFab">
+    💸
+  </button>
+
+  <button class="fab" id="debtFab">
+    🧾
+  </button>
+
+  <button class="fab" id="paymentFab">
+    💰
+  </button>
+
+</div>
+
+
+
+<!-- EXPENSE -->
+
+<div class="popup hidden" id="expensePopup">
+
+  <div class="popup-content">
+
     <div class="popup-header">
-      <h3 id="expensePopupTitle">Thêm chi phí</h3>
-      <button class="close-btn" data-close="expensePopup">✕</button>
+
+      <h2 id="expensePopupTitle">
+        Thêm Chi Phí
+      </h2>
+
+      <button class="close-btn" data-close="expensePopup">
+        ×
+      </button>
+
     </div>
-    <div class="popup-body">
-      <div id="recentExpenseWrap" class="recent-wrap"></div>
-      <div class="smart-input">
-        <div id="expenseDisplay" class="smart-display">Chọn nguyên liệu</div>
-        <div id="expenseSmartPanel" class="smart-panel hidden-panel">
-          <input type="text" id="expenseName" placeholder="Tìm kiếm...">
-          <div id="expenseDropdown" class="dropdown"></div>
-        </div>
-      </div>
-      <div class="quick-money">
-        <button class="quick-btn">50k</button>
-        <button class="quick-btn">100k</button>
-        <button class="quick-btn">200k</button>
-        <button class="quick-btn">500k</button>
-      </div>
-      <input type="text" id="expenseQty" placeholder="Số lượng" class="input-field">
-      <input type="text" id="expenseAmount" placeholder="Số tiền" class="input-field">
-      <button id="saveExpenseBtn" class="btn-primary">Lưu</button>
+
+
+
+    <!-- RECENT -->
+
+    <div class="quick-title">
+      ⚡ Thường dùng
     </div>
+
+    <div
+      class="recent-wrap"
+      id="recentExpenseWrap"
+    ></div>
+
+
+
+    <!-- SEARCH -->
+
+    <div class="smart-select">
+
+      <div
+        class="smart-display"
+        id="expenseDisplay"
+      >
+        Chọn nguyên liệu
+      </div>
+
+      <div
+        class="smart-panel hidden"
+        id="expenseSmartPanel"
+      >
+
+        <input
+          type="text"
+          id="expenseName"
+          placeholder="Nhập tìm kiếm..."
+          autocomplete="off"
+        >
+
+        <div
+          class="dropdown"
+          id="expenseDropdown"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- QUICK MONEY -->
+
+    <div class="quick-title">
+      ⚡ Nhanh
+    </div>
+
+    <div class="quick-money">
+
+      <button class="quick-money-btn">
+        50
+      </button>
+
+      <button class="quick-money-btn">
+        100
+      </button>
+
+      <button class="quick-money-btn">
+        200
+      </button>
+
+      <button class="quick-money-btn">
+        500
+      </button>
+
+    </div>
+
+
+
+    <input
+      type="text"
+      id="expenseQty"
+      placeholder="Số lượng"
+    >
+
+    <input
+      type="text"
+      id="expenseAmount"
+      placeholder="Số tiền"
+    >
+
+    <button
+      class="primary-btn"
+      id="saveExpenseBtn"
+    >
+      Lưu
+    </button>
+
   </div>
+
 </div>
 
-<div id="debtPopup" class="popup popup--hidden">
-  <div class="popup-container">
+
+
+<!-- DEBT -->
+
+<div class="popup hidden" id="debtPopup">
+
+  <div class="popup-content">
+
     <div class="popup-header">
-      <h3 id="debtPopupTitle">Thêm công nợ</h3>
-      <button class="close-btn" data-close="debtPopup">✕</button>
+
+      <h2 id="debtPopupTitle">
+        Thêm Công Nợ
+      </h2>
+
+      <button class="close-btn" data-close="debtPopup">
+        ×
+      </button>
+
     </div>
-    <div class="popup-body">
-      <div id="recentCustomerWrap" class="recent-wrap"></div>
-      <div class="smart-input">
-        <div id="customerDisplay" class="smart-display">Chọn khách</div>
-        <div id="customerSmartPanel" class="smart-panel hidden-panel">
-          <input type="text" id="debtCustomer" placeholder="Tìm khách...">
-          <div id="customerDropdown" class="dropdown"></div>
-        </div>
-      </div>
-      <div class="quick-money">
-        <button class="quick-btn">50k</button>
-        <button class="quick-btn">100k</button>
-        <button class="quick-btn">200k</button>
-        <button class="quick-btn">500k</button>
-      </div>
-      <input type="text" id="debtAmount" placeholder="Số tiền" class="input-field">
-      <textarea id="debtNote" placeholder="Ghi chú" rows="2"></textarea>
-      <button id="saveDebtBtn" class="btn-primary">Lưu</button>
+
+
+
+    <!-- RECENT -->
+
+    <div class="quick-title">
+      ⚡ Khách gần đây
     </div>
+
+    <div
+      class="recent-wrap"
+      id="recentCustomerWrap"
+    ></div>
+
+
+
+    <!-- SMART -->
+
+    <div class="smart-select">
+
+      <div
+        class="smart-display"
+        id="customerDisplay"
+      >
+        Chọn khách
+      </div>
+
+      <div
+        class="smart-panel hidden"
+        id="customerSmartPanel"
+      >
+
+        <input
+          type="text"
+          id="debtCustomer"
+          placeholder="Nhập tên khách..."
+          autocomplete="off"
+        >
+
+        <div
+          class="dropdown"
+          id="customerDropdown"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- QUICK MONEY -->
+
+    <div class="quick-title">
+      ⚡ Nhanh
+    </div>
+
+    <div class="quick-money">
+
+      <button class="quick-debt-btn">
+        50
+      </button>
+
+      <button class="quick-debt-btn">
+        100
+      </button>
+
+      <button class="quick-debt-btn">
+        200
+      </button>
+
+      <button class="quick-debt-btn">
+        500
+      </button>
+
+    </div>
+
+
+
+    <input
+      type="text"
+      id="debtAmount"
+      placeholder="Số tiền"
+    >
+
+    <textarea
+      id="debtNote"
+      placeholder="Ghi chú"
+    ></textarea>
+
+    <button
+      class="primary-btn"
+      id="saveDebtBtn"
+    >
+      Lưu
+    </button>
+
   </div>
+
 </div>
 
-<div id="paymentPopup" class="popup popup--hidden">
-  <div class="popup-container">
+
+
+<!-- PAYMENT -->
+
+<div class="popup hidden" id="paymentPopup">
+
+  <div class="popup-content">
+
     <div class="popup-header">
-      <h3>Thanh toán</h3>
-      <button class="close-btn" data-close="paymentPopup">✕</button>
+
+      <h2>
+        Thanh Toán
+      </h2>
+
+      <button
+        class="close-btn"
+        data-close="paymentPopup"
+      >
+        ×
+      </button>
+
     </div>
-    <div class="popup-body">
-      <div id="recentPaymentWrap" class="recent-wrap"></div>
-      <div class="smart-input">
-        <div id="paymentDisplay" class="smart-display">Chọn khách</div>
-        <div id="paymentSmartPanel" class="smart-panel hidden-panel">
-          <input type="text" id="paymentCustomer" placeholder="Tìm khách...">
-          <div id="paymentDropdown" class="dropdown"></div>
-        </div>
-      </div>
-      <div class="info-row">
-        <span>Tổng nợ:</span>
-        <strong id="paymentTotalDebt">0đ</strong>
-      </div>
-      <div class="info-row">
-        <span>Còn lại:</span>
-        <strong id="paymentRemainDebt">0đ</strong>
-      </div>
-      <div class="quick-money">
-        <button class="quick-btn">50k</button>
-        <button class="quick-btn">100k</button>
-        <button class="quick-btn">200k</button>
-        <button class="quick-btn">500k</button>
-      </div>
-      <input type="text" id="paymentAmount" placeholder="Số tiền" class="input-field">
-      <select id="paymentMethod" class="select-field">
-        <option value="TM">💵 Tiền mặt</option>
-        <option value="CK">🏦 Chuyển khoản</option>
-      </select>
-      <button id="savePaymentBtn" class="btn-primary">Xác nhận</button>
+
+
+
+    <!-- RECENT -->
+
+    <div class="quick-title">
+      ⚡ Khách gần đây
     </div>
+
+    <div
+      class="recent-wrap"
+      id="recentPaymentWrap"
+    ></div>
+
+
+
+    <!-- SMART -->
+
+    <div class="smart-select">
+
+      <div
+        class="smart-display"
+        id="paymentDisplay"
+      >
+        Chọn khách
+      </div>
+
+      <div
+        class="smart-panel hidden"
+        id="paymentSmartPanel"
+      >
+
+        <input
+          type="text"
+          id="paymentCustomer"
+          placeholder="Tìm khách..."
+          autocomplete="off"
+        >
+
+        <div
+          class="dropdown"
+          id="paymentDropdown"
+        ></div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- INFO -->
+
+    <div class="payment-info">
+
+      <div>
+        Tổng nợ:
+        <span id="paymentTotalDebt">
+          0đ
+        </span>
+      </div>
+
+      <div>
+        Còn lại:
+        <span id="paymentRemainDebt">
+          0đ
+        </span>
+      </div>
+
+    </div>
+
+
+
+    <!-- QUICK -->
+
+    <div class="quick-title">
+      ⚡ Nhanh
+    </div>
+
+    <div class="quick-money">
+
+      <button class="quick-payment-btn">
+        50
+      </button>
+
+      <button class="quick-payment-btn">
+        100
+      </button>
+
+      <button class="quick-payment-btn">
+        200
+      </button>
+
+      <button class="quick-payment-btn">
+        500
+      </button>
+
+    </div>
+
+
+
+    <input
+      type="text"
+      id="paymentAmount"
+      placeholder="Số tiền"
+    >
+
+    <select id="paymentMethod">
+
+      <option value="TM">
+        Tiền mặt
+      </option>
+
+      <option value="CK">
+        Chuyển khoản
+      </option>
+
+    </select>
+
+    <button
+      class="primary-btn"
+      id="savePaymentBtn"
+    >
+      Xác Nhận
+    </button>
+
   </div>
+
 </div>
 
-<div id="detailPopup" class="popup popup--hidden">
-  <div class="popup-container">
+
+
+<!-- DETAIL -->
+
+<div class="popup hidden" id="detailPopup">
+
+  <div class="popup-content">
+
     <div class="popup-header">
-      <h3 id="detailTitle"></h3>
-      <button class="close-btn" data-close="detailPopup">✕</button>
-    </div>
-    <div id="detailContent" class="popup-body"></div>
-  </div>
-</div>
 
+      <h2 id="detailTitle"></h2>
+
+      <button class="close-btn" data-close="detailPopup">
+        ×
+      </button>
+
+    </div>
+
+    <div id="detailContent"></div>
+
+  </div>
+
+</div>
 <div id="toast"></div>
 
-<!-- SCRIPTS -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
 
+<!-- File cấu hình (khai báo database, auth) -->
 <script src="firebase-config.js"></script>
+
+<!-- Core (saveData, appData) -->
 <script src="core.js"></script>
+
+<!-- Firebase sync (SAU core.js) -->
 <script src="firebase-sync.js"></script>
-<script src="firebase-role.js"></script>
+
+<!-- Firebase auth (SAU firebase-sync.js) -->
 <script src="firebase-auth.js"></script>
+<script src="firebase-role.js"></script>
+
+<!-- Các file khác -->
 <script src="employee.js"></script>
 <script src="manager.js"></script>
 

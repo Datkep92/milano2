@@ -22,15 +22,11 @@ const toast = document.getElementById("toast");
 
 function showToast(message){
   clearTimeout(toastTimeout);
-  if (toast) {
-    toast.innerText = message;
-    toast.classList.add("show");
-    toastTimeout = setTimeout(()=>{
-      toast.classList.remove("show");
-    }, 1200);
-  } else {
-    alert(message);
-  }
+  toast.innerText = message;
+  toast.classList.add("show");
+  toastTimeout = setTimeout(()=>{
+    toast.classList.remove("show");
+  },1200);
 }
 
 function saveData(){
@@ -50,7 +46,6 @@ function formatMoney(value){
 }
 
 function formatInputMoney(input){
-  if (!input) return;
   input.addEventListener("input",()=>{
     let value = parseMoney(input.value);
     if(input.value.trim() === ""){
@@ -69,16 +64,13 @@ function getToday(){
   return `${year}-${month}-${day}`;
 }
 
+// Lấy ngày hiện tại đang chọn trên giao diện
 function getCurrentDate(){
-  const reportDateElem = document.getElementById("reportDate");
-  if (reportDateElem) {
-    return reportDateElem.value;
-  }
-  return getToday();
+  return reportDate.value;
 }
 
+// Format ngày khi hiển thị (không ảnh hưởng đến logic so sánh)
 function formatDisplayDate(dateString){
-  if (!dateString) return "";
   const [year, month, day] = dateString.split('-');
   return `${day}/${month}/${year}`;
 }
@@ -96,17 +88,11 @@ function getReport(date){
 }
 
 function openPopup(id){
-  const popup = document.getElementById(id);
-  if (popup) {
-    popup.classList.remove("popup--hidden");
-  }
+  document.getElementById(id).classList.remove("hidden");
 }
 
 function closePopup(id){
-  const popup = document.getElementById(id);
-  if (popup) {
-    popup.classList.add("popup--hidden");
-  }
+  document.getElementById(id).classList.add("hidden");
 }
 
 function calculateExpenseTotal(date){
@@ -149,7 +135,6 @@ function addRecent(type,name){
 }
 
 function renderDropdown(input, dropdown, list){
-  if (!input || !dropdown) return;
   const keyword = input.value.trim().toLowerCase();
   const unique = [...new Set(list)];
   const sorted = unique.sort((a,b)=>{
@@ -190,11 +175,13 @@ function isInPeriod(date,period){
   return d >= period.start && d <= period.end;
 }
 
+// Sửa lại trong core.js
 function isEditable(date){
   const today = getToday();
   if(date === today) return true;
   const report = getReport(date);
   
+  // Nếu ngày đã chốt, chỉ admin mới được sửa
   if (report.status === "completed") {
     return window.isAdminSync ? window.isAdminSync() : false;
   }
@@ -206,8 +193,45 @@ function isAddable(date){
   if(date === today) return true;
   const report = getReport(date);
   
+  // Ngày cũ đã chốt: chỉ admin được thêm
   if (report.status === "completed") {
     return window.isAdminSync ? window.isAdminSync() : false;
   }
+  // Ngày cũ chưa chốt: không ai được thêm
   return false;
 }
+
+/* =========================
+   BLOCK MOBILE ZOOM
+========================= */
+
+document.addEventListener(
+  "gesturestart",
+  function(e){
+
+    e.preventDefault();
+
+  }
+);
+
+
+
+let lastTouchEnd = 0;
+
+document.addEventListener(
+  "touchend",
+  function(e){
+
+    const now = Date.now();
+
+    if(now - lastTouchEnd <= 300){
+
+      e.preventDefault();
+
+    }
+
+    lastTouchEnd = now;
+
+  },
+  { passive:false }
+);
