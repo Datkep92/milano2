@@ -759,3 +759,47 @@ body {
     font-size: 20px;
   }
 }
+
+/* Đảm bảo không có lớp phủ */
+.login-screen.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  z-index: -1 !important;
+}
+
+.app-container {
+  display: block;
+}
+
+.app-container.hidden {
+  display: none !important;
+}
+
+.popup.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+.fab-group {
+  z-index: 100;
+  pointer-events: auto;
+}
+
+.fab {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Đảm bảo các nút có thể click */
+button,
+.fab,
+.icon-btn,
+.btn-primary,
+.btn-login,
+.logout-btn {
+  cursor: pointer;
+  pointer-events: auto;
+}
