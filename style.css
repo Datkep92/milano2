@@ -329,7 +329,7 @@ body {
 .fab-group {
   position: fixed;
   right: 20px;
-  bottom: 50px;
+  bottom: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -896,18 +896,3 @@ html {
   }
 }
 
-.day-complete-row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-.day-complete-row .day-status{
-  flex:1;
-}
-
-.day-complete-row .primary-btn{
-  width:150px;
-  margin:0;
-  white-space:nowrap;
-}
