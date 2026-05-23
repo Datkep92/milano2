@@ -702,27 +702,33 @@ openDebtHistory.onclick = (e) => {
   
   if (list.length === 0) {
     html = '<div class="empty-text">📭 Chưa có công nợ phát sinh</div>';
-  } else {
-    list.forEach(item => {
-      const isDebt = item.type === "debt_add";
-      html += `
-        <div class="history-item">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>${isDebt ? "🧾 Công nợ" : "💰 Thanh toán"}</strong>
-            <span style="color: ${isDebt ? 'var(--danger)' : 'var(--success)'}; font-weight: 600;">
-              ${isDebt ? "+" : "-"} ${formatMoney(item.amount)}
-            </span>
-          </div>
-          <div style="margin-top: 6px;">👤 ${item.customer}</div>
-          ${item.note ? `<div style="font-size: 13px; color: var(--text-light);">📝 ${item.note}</div>` : ''}
-          <div class="action-row" style="margin-top: 10px;">
-            <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">✏️ Sửa</button>
-            <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">🗑️ Xóa</button>
-          </div>
-        </div>
-      `;
-    });
-  }
+  } else list.forEach(item => {
+  const isDebt = item.type === "debt_add";
+
+  html += `
+    <div class="history-item">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <strong>${item.customer || "Khách hàng"}</strong>
+        <span style="
+          color:${isDebt ? 'var(--danger)' : 'var(--success)'};
+          font-weight:700;
+        ">
+          ${isDebt ? '+' : '-'} ${formatMoney(item.amount)}
+        </span>
+      </div>
+
+      <div class="action-row" style="margin-top:10px;">
+        <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">
+          ✏️ Sửa
+        </button>
+
+        <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">
+          🗑️ Xóa
+        </button>
+      </div>
+    </div>
+  `;
+});
   
   detailContent.innerHTML = html;
   openPopup("detailPopup");

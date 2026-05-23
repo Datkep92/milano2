@@ -58,48 +58,63 @@
   <!-- ========== EMPLOYEE TAB ========== -->
   <div class="tab-content active" id="employeeTab">
 
-    <!-- CARD 1: CHỐT NGÀY -->
-    <div class="card">
-      <div class="date-row">
-        <button id="prevDateBtn">◀</button>
-        <input type="date" id="reportDate">
-        <button id="nextDateBtn">▶</button>
-      </div>
-      <div class="day-complete-row">
-        <div class="day-status" id="dayStatus">🟡 Đang nhập</div>
-        <button class="primary-btn" id="completeDayBtn">CHỐT NGÀY</button>
-      </div>
+    <!-- CARD: BÁO CÁO NGÀY -->
+<div class="card">
+
+  <!-- CHỌN NGÀY -->
+  <div class="date-row">
+    <button id="prevDateBtn">◀</button>
+    <input type="date" id="reportDate">
+    <button id="nextDateBtn">▶</button>
+  </div>
+
+  <!-- TÓM TẮT -->
+  <div class="summary-grid">
+
+    <!-- HÀNG 1 -->
+    <div class="summary-item readonly clickable-summary" id="openExpenseHistory">
+      <label>Tổng chi phí</label>
+      <div class="big-value" id="expenseTotal">0đ</div>
+      <div class="summary-hint">Click xem chi tiết</div>
     </div>
 
-    <!-- CARD 2: BÁO CÁO -->
-    <div class="card">
-      <h2>Báo Cáo Hôm Nay</h2>
-      <div class="summary-grid">
-        <div class="summary-item">
-          <label>Chuyển khoản</label>
-          <input type="text" id="bankInput">
-        </div>
-        <div class="summary-item">
-          <label>Tiền mặt thực nhận</label>
-          <input type="text" id="cashInput">
-        </div>
-        <div class="summary-item">
-          <label>Tiền gối đầu</label>
-          <input type="text" id="reserveInput">
-        </div>
-        <div class="summary-item readonly clickable-summary" id="openExpenseHistory">
-          <label>Tổng chi phí</label>
-          <div class="big-value" id="expenseTotal">0đ</div>
-          <div class="summary-hint">Click xem chi tiết</div>
-        </div>
-        <div class="summary-item readonly clickable-summary" id="openDebtHistory">
-          <label>Tổng công nợ</label>
-          <div class="big-value" id="debtTotal">0đ</div>
-          <div class="summary-hint">Click xem chi tiết</div>
-        </div>
-      </div>
+    <div class="summary-item readonly clickable-summary" id="openDebtHistory">
+      <label>Tổng công nợ</label>
+      <div class="big-value" id="debtTotal">0đ</div>
+      <div class="summary-hint">Click xem chi tiết</div>
     </div>
 
+    <!-- HÀNG 2 -->
+    <div class="summary-item">
+      <label>Tiền mặt thực nhận</label>
+      <input type="text" id="cashInput" placeholder="0">
+    </div>
+
+    <div class="summary-item">
+      <label>Chuyển khoản</label>
+      <input type="text" id="bankInput" placeholder="0">
+    </div>
+
+    <!-- HÀNG 3 -->
+    <div class="summary-item full-width">
+      <label>Giao quỹ</label>
+      <input type="text" id="reserveInput" placeholder="0">
+    </div>
+
+  </div>
+
+  <!-- CHỐT NGÀY -->
+  <div class="day-complete-row">
+    <div class="day-status" id="dayStatus">
+      🟡 Đang nhập
+    </div>
+
+    <button class="primary-btn" id="completeDayBtn">
+      CHỐT NGÀY
+    </button>
+  </div>
+
+</div>
     <!-- CARD 3: DANH SÁCH CÔNG NỢ -->
     <div class="card">
       <div class="card-header">

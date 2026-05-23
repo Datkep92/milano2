@@ -222,14 +222,36 @@ function renderExpenseStats(range){
     const total = grouped[name].reduce((a, b) => a + b.amount, 0);
     const qtyTotal = grouped[name].reduce((a, b) => a + (b.qty || 0), 0);
     html += `
-      <div class="manager-item" onclick="showExpenseDetail('${name.replace(/'/g, "\\'")}')">
-        <strong>📦 ${name}</strong>
-        <div class="manager-item-stats">
-          <span>💰 ${formatMoney(total)}</span>
-          ${qtyTotal > 0 ? `<span>📊 SL: ${qtyTotal}</span>` : ""}
-        </div>
-      </div>
-    `;
+  <div
+    class="manager-item"
+    onclick="showExpenseDetail('${name.replace(/'/g, "\\'")}')"
+    style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    "
+  >
+
+    <span style="
+      flex:1;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    ">
+      📦 ${name}
+    </span>
+
+    <strong style="
+      flex-shrink:0;
+      white-space:nowrap;
+    ">
+      ${qtyTotal > 0 ? `SL:${qtyTotal} • ` : ""}
+      ${formatMoney(total)}
+    </strong>
+
+  </div>
+`;
   });
   if(html === "") html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí</div>';
   managerExpenseList.innerHTML = html;
@@ -266,13 +288,30 @@ function renderDebtStats(range){
     const balance = balanceAtEnd[customer];
     if(balance > 0){
       html += `
-        <div class="manager-item" onclick="showDebtDetail('${customer.replace(/'/g, "\\'")}')">
-          <strong>👤 ${customer}</strong>
-          <div class="manager-item-stats">
-            <span>💰 Dư nợ: ${formatMoney(balance)}</span>
-          </div>
-        </div>
-      `;
+  <div
+    class="manager-item"
+    onclick="showDebtDetail('${customer.replace(/'/g, "\\'")}')"
+    style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    "
+  >
+
+    <span style="flex:1;">
+      👤 ${customer}
+    </span>
+
+    <strong style="
+      color:var(--danger);
+      white-space:nowrap;
+    ">
+   Nợ: ${formatMoney(balance)}
+    </strong>
+
+  </div>
+`;
     }
   });
   if(html === "") html = '<div class="empty-text">✅ Không có khách nợ</div>';
@@ -311,48 +350,105 @@ if(exportDebtBtn){
   };
 }
 
-// ========== DETAIL VIEW ==========
 function showExpenseDetail(name){
   detailTitle.innerText = "Chi Tiết: " + name;
+
   let html = "";
+
   appData.expenses
     .filter(x => x.name === name && !x.deleted)
     .sort((a, b) => b.date.localeCompare(a.date))
     .forEach(item => {
+
       html += `
         <div class="history-item">
-          <div><strong>📅 ${item.date}</strong></div>
-          <div>💰 ${formatMoney(item.amount)}</div>
-          ${item.qty ? `<div>📦 Số lượng: ${item.qty}</div>` : ""}
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          ">
+            <strong>📅 ${item.date}</strong>
+
+            <span style="
+              color:var(--danger);
+              font-weight:700;
+            ">
+              ${formatMoney(item.amount)}
+            </span>
+          </div>
+
+          ${item.qty ? `
+            <div style="margin-top:6px;">
+              📦 Số lượng: ${item.qty}
+            </div>
+          ` : ""}
+
         </div>
       `;
     });
-  if(html === "") html = '<div class="empty-text">Không có dữ liệu</div>';
+
+  if(html === ""){
+    html = '<div class="empty-text">Không có dữ liệu</div>';
+  }
+
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 }
 
 function showDebtDetail(customer){
   detailTitle.innerText = "Công Nợ: " + customer;
+
   let balance = 0;
   let html = "";
+
   appData.debtTransactions
     .filter(x => x.customer === customer && !x.deleted)
     .sort((a, b) => a.date.localeCompare(b.date))
     .forEach(item => {
-      if(item.type === "debt_add") balance += item.amount;
-      else balance -= item.amount;
+
+      if(item.type === "debt_add"){
+        balance += item.amount;
+      } else {
+        balance -= item.amount;
+      }
+
+      const isDebt = item.type === "debt_add";
+
       html += `
         <div class="history-item">
-          <div><strong>📅 ${item.date}</strong></div>
-          <div>${item.type === "debt_add" ? "🧾 Công nợ (+)" : "💰 Thanh toán (-)"}</div>
-          <div>💰 ${formatMoney(item.amount)}</div>
-          <div>📊 Còn lại: ${formatMoney(balance)}</div>
-          ${item.note ? `<div>📝 ${item.note}</div>` : ""}
+
+          <div style="
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+          ">
+            <strong>${item.date}</strong>
+
+            <span style="
+              color:${isDebt ? 'var(--danger)' : 'var(--success)'};
+              font-weight:700;
+            ">
+              ${isDebt ? '+' : '-'} ${formatMoney(item.amount)}
+            </span>
+          </div>
+
+          <div style="
+            margin-top:6px;
+            font-size:14px;
+            font-weight:600;
+          ">
+            Còn lại: ${formatMoney(balance)}
+          </div>
+
         </div>
       `;
     });
-  if(html === "") html = '<div class="empty-text">Không có dữ liệu</div>';
+
+  if(html === ""){
+    html = '<div class="empty-text">Không có dữ liệu</div>';
+  }
+
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 }
