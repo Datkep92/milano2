@@ -175,18 +175,22 @@ async function logout() {
 
 // Hiển thị app
 function showApp(user) {
+  console.log("showApp called", user);
+  
+  // Ẩn login bằng class riêng
   if (loginScreen) {
-    loginScreen.classList.add("hidden");
-    loginScreen.style.display = "none";
+    loginScreen.classList.remove("login-screen--visible");
+    loginScreen.classList.add("login-screen--hidden");
   }
+  
+  // Hiện app bằng class riêng
   if (appContainer) {
-    appContainer.classList.remove("hidden");
-    appContainer.style.display = "block";
+    appContainer.classList.remove("app-container--hidden");
+    appContainer.classList.add("app-container--visible");
   }
   
   if (userInfoSpan) {
-    const email = user?.email || localStorage.getItem("userEmail") || "User";
-    userInfoSpan.innerHTML = `<span class="user-name">${email}</span>`;
+    userInfoSpan.innerHTML = `<span class="user-name">${user.email}</span>`;
   }
   
   // Cập nhật trạng thái admin
@@ -194,21 +198,28 @@ function showApp(user) {
     updateAdminStatus();
   }
   
-  // Tải dữ liệu từ Firebase
-  if (typeof loadFromFirebase === 'function') {
-    setTimeout(() => loadFromFirebase(), 500);
-  }
+  // Tải dữ liệu
+  setTimeout(() => {
+    if (typeof loadTodayData === 'function') loadTodayData();
+    if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
+    if (typeof loadFromFirebase === 'function') loadFromFirebase();
+  }, 100);
 }
 
 // Ẩn app
 function hideApp() {
+  console.log("hideApp called");
+  
+  // Hiện login
   if (loginScreen) {
-    loginScreen.classList.remove("hidden");
-    loginScreen.style.display = "flex";
+    loginScreen.classList.remove("login-screen--hidden");
+    loginScreen.classList.add("login-screen--visible");
   }
+  
+  // Ẩn app
   if (appContainer) {
-    appContainer.classList.add("hidden");
-    appContainer.style.display = "none";
+    appContainer.classList.remove("app-container--visible");
+    appContainer.classList.add("app-container--hidden");
   }
 }
 
@@ -217,8 +228,8 @@ if (showRegister) {
   showRegister.onclick = () => {
     const loginForm = document.getElementById("loginForm");
     const registerForm = document.getElementById("registerForm");
-    if (loginForm) loginForm.classList.add("hidden");
-    if (registerForm) registerForm.classList.remove("hidden");
+    if (loginForm) loginForm.classList.add("hidden-form");
+    if (registerForm) registerForm.classList.remove("hidden-form");
     if (loginError) loginError.innerText = "";
     if (registerError) registerError.innerText = "";
   };
@@ -228,8 +239,8 @@ if (showLogin) {
   showLogin.onclick = () => {
     const loginForm = document.getElementById("loginForm");
     const registerForm = document.getElementById("registerForm");
-    if (registerForm) registerForm.classList.add("hidden");
-    if (loginForm) loginForm.classList.remove("hidden");
+    if (registerForm) registerForm.classList.add("hidden-form");
+    if (loginForm) loginForm.classList.remove("hidden-form");
     if (loginError) loginError.innerText = "";
     if (registerError) registerError.innerText = "";
   };
