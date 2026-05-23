@@ -8,8 +8,8 @@
 </head>
 <body>
 
-<!-- MÀN HÌNH ĐĂNG NHẬP - TÁCH BIỆT HOÀN TOÀN -->
-<div id="loginScreen" class="login-screen">
+<!-- MÀN HÌNH ĐĂNG NHẬP -->
+<div id="loginScreen" class="login-screen login-screen--visible">
   <div class="login-container">
     <div class="login-header">
       <div class="logo-icon">☕</div>
@@ -25,7 +25,7 @@
       <p class="toggle-link">Chưa có tài khoản? <span id="showRegister">Đăng ký</span></p>
     </div>
 
-    <div id="registerForm" class="login-form hidden">
+    <div id="registerForm" class="login-form hidden-form">
       <input type="email" id="registerEmail" placeholder="Email">
       <input type="password" id="registerPassword" placeholder="Mật khẩu">
       <input type="password" id="registerConfirmPassword" placeholder="Xác nhận">
@@ -36,8 +36,8 @@
   </div>
 </div>
 
-<!-- APP CHÍNH - TÁCH BIỆT HOÀN TOÀN -->
-<div id="appContainer" class="app-container">
+<!-- APP CHÍNH -->
+<div id="appContainer" class="app-container app-container--hidden">
   
   <!-- HEADER -->
   <div class="header">
@@ -114,10 +114,10 @@
         <div id="periodDisplay" class="period-label">Đang tải...</div>
         <button id="periodNextBtn" class="icon-btn">▶</button>
       </div>
-      <div id="datePickerWrapper" class="picker-wrapper hidden">
+      <div id="datePickerWrapper" class="picker-wrapper hidden-panel">
         <input type="date" id="managerDatePicker" class="date-input">
       </div>
-      <div id="monthPickerWrapper" class="picker-wrapper hidden">
+      <div id="monthPickerWrapper" class="picker-wrapper hidden-panel">
         <input type="month" id="managerMonthPicker" class="date-input">
       </div>
     </div>
@@ -171,7 +171,7 @@
 </div>
 
 <!-- ========== POPUPS ========== -->
-<div id="expensePopup" class="popup hidden">
+<div id="expensePopup" class="popup popup--hidden">
   <div class="popup-container">
     <div class="popup-header">
       <h3 id="expensePopupTitle">Thêm chi phí</h3>
@@ -181,7 +181,7 @@
       <div id="recentExpenseWrap" class="recent-wrap"></div>
       <div class="smart-input">
         <div id="expenseDisplay" class="smart-display">Chọn nguyên liệu</div>
-        <div id="expenseSmartPanel" class="smart-panel hidden">
+        <div id="expenseSmartPanel" class="smart-panel hidden-panel">
           <input type="text" id="expenseName" placeholder="Tìm kiếm...">
           <div id="expenseDropdown" class="dropdown"></div>
         </div>
@@ -199,7 +199,7 @@
   </div>
 </div>
 
-<div id="debtPopup" class="popup hidden">
+<div id="debtPopup" class="popup popup--hidden">
   <div class="popup-container">
     <div class="popup-header">
       <h3 id="debtPopupTitle">Thêm công nợ</h3>
@@ -209,7 +209,7 @@
       <div id="recentCustomerWrap" class="recent-wrap"></div>
       <div class="smart-input">
         <div id="customerDisplay" class="smart-display">Chọn khách</div>
-        <div id="customerSmartPanel" class="smart-panel hidden">
+        <div id="customerSmartPanel" class="smart-panel hidden-panel">
           <input type="text" id="debtCustomer" placeholder="Tìm khách...">
           <div id="customerDropdown" class="dropdown"></div>
         </div>
@@ -227,7 +227,7 @@
   </div>
 </div>
 
-<div id="paymentPopup" class="popup hidden">
+<div id="paymentPopup" class="popup popup--hidden">
   <div class="popup-container">
     <div class="popup-header">
       <h3>Thanh toán</h3>
@@ -237,7 +237,7 @@
       <div id="recentPaymentWrap" class="recent-wrap"></div>
       <div class="smart-input">
         <div id="paymentDisplay" class="smart-display">Chọn khách</div>
-        <div id="paymentSmartPanel" class="smart-panel hidden">
+        <div id="paymentSmartPanel" class="smart-panel hidden-panel">
           <input type="text" id="paymentCustomer" placeholder="Tìm khách...">
           <div id="paymentDropdown" class="dropdown"></div>
         </div>
@@ -266,7 +266,7 @@
   </div>
 </div>
 
-<div id="detailPopup" class="popup hidden">
+<div id="detailPopup" class="popup popup--hidden">
   <div class="popup-container">
     <div class="popup-header">
       <h3 id="detailTitle"></h3>
