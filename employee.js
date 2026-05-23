@@ -734,4 +734,67 @@ if (openExpenseHistory) {
               <button class="action-btn edit-btn" onclick="editExpense('${item.id}')">Sửa</button>
               <button class="action-btn delete-btn" onclick="deleteExpense('${item.id}')">Xóa</button>
             </div>
-          </
+          </div>
+        `;
+      });
+    }
+    if (detailContent) detailContent.innerHTML = html;
+    openPopup("detailPopup");
+  };
+}
+
+if (openDebtHistory) {
+  openDebtHistory.onclick = () => {
+    if (detailTitle) detailTitle.innerText = "Công Nợ Hôm Nay";
+    const date = getCurrentDate();
+    let html = "";
+    const list = appData.debtTransactions.filter(x => x.date === date && !x.deleted);
+    if (list.length === 0) {
+      html = '<div class="empty-text">Chưa có dữ liệu</div>';
+    } else {
+      list.forEach(item => {
+        html += `
+          <div class="history-item">
+            <strong>${item.type === "debt_add" ? "🧾" : "💰"} ${item.customer}</strong><br>
+            ${item.type === "debt_add" ? "+" : "-"} ${formatMoney(item.amount)}
+            <div class="action-row">
+              <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">Sửa</button>
+              <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">Xóa</button>
+            </div>
+          </div>
+        `;
+      });
+    }
+    if (detailContent) detailContent.innerHTML = html;
+    openPopup("detailPopup");
+  };
+}
+
+// ========== DATE NAVIGATION ==========
+if (prevDateBtn) {
+  prevDateBtn.onclick = () => {
+    if (!reportDate) return;
+    const d = new Date(reportDate.value);
+    d.setDate(d.getDate() - 1);
+    reportDate.value = d.toISOString().split("T")[0];
+    loadTodayData();
+  };
+}
+
+if (nextDateBtn) {
+  nextDateBtn.onclick = () => {
+    if (!reportDate) return;
+    const d = new Date(reportDate.value);
+    d.setDate(d.getDate() + 1);
+    reportDate.value = d.toISOString().split("T")[0];
+    loadTodayData();
+  };
+}
+
+// ========== LOAD DRAFTS & INIT ==========
+loadPaymentDraft();
+loadDebtDraft();
+loadExpenseDraft();
+loadTodayData();
+
+console.log("=== EMPLOYEE.JS LOADED SUCCESSFULLY ===");
