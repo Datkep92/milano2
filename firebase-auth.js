@@ -116,77 +116,14 @@ async function logout() {
 
 
 
-// Ẩn app, hiện login
-function hideApp() {
-  if (loginScreen) loginScreen.classList.remove("hidden");
-  if (appContainer) appContainer.classList.add("hidden");
-}
 
-// Chuyển đổi giữa login và register
-if (showRegister) {
-  showRegister.onclick = () => {
-    const loginForm = document.getElementById("loginForm");
-    const registerForm = document.getElementById("registerForm");
-    if (loginForm) loginForm.classList.add("hidden");
-    if (registerForm) registerForm.classList.remove("hidden");
-    if (loginError) loginError.innerText = "";
-    if (registerError) registerError.innerText = "";
-  };
-}
 
-if (showLogin) {
-  showLogin.onclick = () => {
-    const loginForm = document.getElementById("loginForm");
-    const registerForm = document.getElementById("registerForm");
-    if (registerForm) registerForm.classList.add("hidden");
-    if (loginForm) loginForm.classList.remove("hidden");
-    if (loginError) loginError.innerText = "";
-    if (registerError) registerError.innerText = "";
-  };
-}
 
-// Gán sự kiện cho nút bấm
-if (loginBtn) {
-  loginBtn.onclick = () => {
-    const email = loginEmail ? loginEmail.value.trim() : "";
-    const password = loginPassword ? loginPassword.value : "";
-    if (email && password) {
-      login(email, password);
-    } else {
-      if (loginError) loginError.innerText = "Vui lòng nhập email và mật khẩu";
-    }
-  };
-}
 
-if (registerBtn) {
-  registerBtn.onclick = () => {
-    const email = registerEmail ? registerEmail.value.trim() : "";
-    const password = registerPassword ? registerPassword.value : "";
-    const confirmPassword = registerConfirmPassword ? registerConfirmPassword.value : "";
-    if (email && password) {
-      register(email, password, confirmPassword);
-    } else {
-      if (registerError) registerError.innerText = "Vui lòng nhập đầy đủ thông tin";
-    }
-  };
-}
 
-if (logoutBtn) {
-  logoutBtn.onclick = logout;
-}
 
-// Enter để đăng nhập/đăng ký
-if (loginPassword) {
-  loginPassword.addEventListener("keypress", (e) => {
-    if (e.key === "Enter" && loginBtn) loginBtn.click();
-  });
-}
 
-if (registerConfirmPassword) {
-  registerConfirmPassword.addEventListener("keypress", (e) => {
-    if (e.key === "Enter" && registerBtn) registerBtn.click();
-  });
-}
+
 
 // Kiểm tra trạng thái đăng nhập khi load trang
 auth.onAuthStateChanged(async (user) => {
@@ -306,37 +243,39 @@ async function register(email, password, confirmPassword) {
   }
 }
 
-// Gọi checkFirstUser sau khi đăng nhập
-// Sửa hàm showApp
+
+  
+  // Hiển thị app, ẩn login
 function showApp(user) {
-  if (loginScreen) loginScreen.classList.add("hidden");
-  if (appContainer) appContainer.classList.remove("hidden");
-  if (userInfo) userInfo.innerText = `👤 ${user.email}`;
+  const loginScreen = document.getElementById("loginScreen");
+  const appContainer = document.getElementById("appContainer");
   
-  // Kiểm tra role
-  checkFirstUser().then(async () => {
-    const role = await getUserRole(user.uid);
-    const isAdminUser = role === ROLES.ADMIN;
-    
-    // Ẩn/hiện tab Quản Lý dựa trên role
-    const managerTabBtn = document.querySelector('.tab-btn[data-tab="managerTab"]');
-    if (managerTabBtn) {
-      if (isAdminUser) {
-        managerTabBtn.classList.remove("hidden");
-      } else {
-        managerTabBtn.classList.add("hidden");
-        // Nếu đang ở tab quản lý, chuyển về tab nhân viên
-        const activeTab = document.querySelector('.tab-content.active');
-        if (activeTab && activeTab.id === "managerTab") {
-          const employeeTabBtn = document.querySelector('.tab-btn[data-tab="employeeTab"]');
-          if (employeeTabBtn) employeeTabBtn.click();
-        }
-      }
-    }
-  });
+  if (loginScreen) {
+    loginScreen.classList.add("hidden");
+    loginScreen.style.display = "none"; // Force ẩn
+  }
+  if (appContainer) {
+    appContainer.classList.remove("hidden");
+    appContainer.style.display = "block"; // Force hiển thị
+  }
   
-  // Tải dữ liệu từ Firebase
-  if (typeof loadFromFirebase === 'function') {
-    loadFromFirebase();
+  if (userInfo) userInfo.innerText = user.email;
+  
+  // Tải dữ liệu
+  if (typeof loadFromFirebase === 'function') loadFromFirebase();
+}
+
+// Ẩn app, hiện login
+function hideApp() {
+  const loginScreen = document.getElementById("loginScreen");
+  const appContainer = document.getElementById("appContainer");
+  
+  if (loginScreen) {
+    loginScreen.classList.remove("hidden");
+    loginScreen.style.display = "flex";
+  }
+  if (appContainer) {
+    appContainer.classList.add("hidden");
+    appContainer.style.display = "none";
   }
 }
