@@ -62,16 +62,69 @@ reportDate.value = getToday();
 
 [bankInput, cashInput, reserveInput, expenseAmount, debtAmount, paymentAmount].forEach(formatInputMoney);
 
-// ========== HÀM CHÍNH ==========
+// Sửa hàm renderRecentExpenses
+function renderRecentExpenses(){
+  if (!recentExpenseWrap) return;
+  if (!appData || !appData.recent || !appData.recent.expenses) {
+    recentExpenseWrap.innerHTML = '';
+    return;
+  }
+  let html = "";
+  appData.recent.expenses.forEach(name => {
+    if (name) {
+      html += `<button class="recent-btn" onclick="selectExpenseRecent('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+    }
+  });
+  recentExpenseWrap.innerHTML = html;
+}
+
+// Sửa hàm renderRecentCustomers
+function renderRecentCustomers(){
+  if (!recentCustomerWrap) return;
+  if (!appData || !appData.recent || !appData.recent.customers) {
+    recentCustomerWrap.innerHTML = '';
+    return;
+  }
+  let html = "";
+  appData.recent.customers.forEach(name => {
+    if (name) {
+      html += `<button class="recent-btn" onclick="selectRecentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+    }
+  });
+  recentCustomerWrap.innerHTML = html;
+}
+
+// Sửa hàm renderRecentPayments
+function renderRecentPayments(){
+  if (!recentPaymentWrap) return;
+  if (!appData || !appData.recent || !appData.recent.customers) {
+    recentPaymentWrap.innerHTML = '';
+    return;
+  }
+  let html = "";
+  appData.recent.customers.forEach(name => {
+    if (!name) return;
+    const debt = calculateCustomerDebt(name);
+    if(debt <= 0) return;
+    html += `<button class="recent-btn" onclick="selectPaymentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
+  });
+  recentPaymentWrap.innerHTML = html;
+}
+
+// Sửa hàm loadTodayData
 function loadTodayData(){
+  if (!appData) {
+    console.error("appData chưa sẵn sàng");
+    return;
+  }
   const date = getCurrentDate();
   const report = getReport(date);
-  bankInput.value = report.bank.toLocaleString("vi-VN");
-  cashInput.value = report.cash.toLocaleString("vi-VN");
-  reserveInput.value = report.reserve.toLocaleString("vi-VN");
-  expenseTotal.innerText = formatMoney(calculateExpenseTotal(date));
-  debtTotal.innerText = formatMoney(calculateDebtTotal(date));
-  dayStatus.innerHTML = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
+  if (bankInput) bankInput.value = (report.bank || 0).toLocaleString("vi-VN");
+  if (cashInput) cashInput.value = (report.cash || 0).toLocaleString("vi-VN");
+  if (reserveInput) reserveInput.value = (report.reserve || 0).toLocaleString("vi-VN");
+  if (expenseTotal) expenseTotal.innerText = formatMoney(calculateExpenseTotal(date));
+  if (debtTotal) debtTotal.innerText = formatMoney(calculateDebtTotal(date));
+  if (dayStatus) dayStatus.innerHTML = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
 }
 
 function autoSaveReport() {
@@ -565,14 +618,7 @@ function deleteDebt(id) {
   }
 }
 
-// ========== RECENT & UI ==========
-function renderRecentExpenses(){
-  let html = "";
-  appData.recent.expenses.forEach(name => {
-    html += `<button class="recent-btn" onclick="selectExpenseRecent('${name.replace(/'/g, "\\'")}')">${name}</button>`;
-  });
-  recentExpenseWrap.innerHTML = html;
-}
+
 
 function selectExpenseRecent(name){
   expenseName.value = name;
@@ -581,13 +627,7 @@ function selectExpenseRecent(name){
   expenseAmount.focus();
 }
 
-function renderRecentCustomers(){
-  let html = "";
-  appData.recent.customers.forEach(name => {
-    html += `<button class="recent-btn" onclick="selectRecentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
-  });
-  recentCustomerWrap.innerHTML = html;
-}
+
 
 function selectRecentCustomer(name){
   debtCustomer.value = name;
@@ -596,15 +636,7 @@ function selectRecentCustomer(name){
   debtAmount.focus();
 }
 
-function renderRecentPayments(){
-  let html = "";
-  appData.recent.customers.forEach(name => {
-    const debt = calculateCustomerDebt(name);
-    if(debt <= 0) return;
-    html += `<button class="recent-btn" onclick="selectPaymentCustomer('${name.replace(/'/g, "\\'")}')">${name}</button>`;
-  });
-  recentPaymentWrap.innerHTML = html;
-}
+
 
 function selectPaymentCustomer(name){
   paymentCustomer.value = name;

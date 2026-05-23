@@ -306,37 +306,37 @@ async function register(email, password, confirmPassword) {
   }
 }
 
-// Gọi checkFirstUser sau khi đăng nhập
 // Sửa hàm showApp
-function showApp(user) {
+async function showApp(user) {
   if (loginScreen) loginScreen.classList.add("hidden");
   if (appContainer) appContainer.classList.remove("hidden");
-  if (userInfo) userInfo.innerText = `👤 ${user.email}`;
+  if (userInfo) userInfo.innerText = user.email.split('@')[0];
   
-  // Kiểm tra role
-  checkFirstUser().then(async () => {
-    const role = await getUserRole(user.uid);
-    const isAdminUser = role === ROLES.ADMIN;
-    
-    // Ẩn/hiện tab Quản Lý dựa trên role
-    const managerTabBtn = document.querySelector('.tab-btn[data-tab="managerTab"]');
-    if (managerTabBtn) {
-      if (isAdminUser) {
-        managerTabBtn.classList.remove("hidden");
-      } else {
-        managerTabBtn.classList.add("hidden");
-        // Nếu đang ở tab quản lý, chuyển về tab nhân viên
-        const activeTab = document.querySelector('.tab-content.active');
-        if (activeTab && activeTab.id === "managerTab") {
-          const employeeTabBtn = document.querySelector('.tab-btn[data-tab="employeeTab"]');
-          if (employeeTabBtn) employeeTabBtn.click();
-        }
-      }
+  // Cập nhật role
+  const role = await getUserRole(user.uid);
+  const isAdminUser = role === ROLES.ADMIN;
+  window.isAdminSync = () => isAdminUser;
+  
+  // Ẩn/hiện tab quản lý
+  const managerTabBtn = document.querySelector('.tab[data-tab="manager"]');
+  if (managerTabBtn) {
+    if (isAdminUser) {
+      managerTabBtn.classList.remove("hidden");
+    } else {
+      managerTabBtn.classList.add("hidden");
     }
-  });
-  
-  // Tải dữ liệu từ Firebase
-  if (typeof loadFromFirebase === 'function') {
-    loadFromFirebase();
   }
+  
+  // Tải dữ liệu từ Firebase và đợi hoàn tất
+  if (typeof loadFromFirebase === 'function') {
+    await loadFromFirebase();
+  }
+  
+  // Đảm bảo render lại sau khi có dữ liệu
+  setTimeout(() => {
+    if (typeof loadTodayData === 'function') loadTodayData();
+    if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
+    if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
+    if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
+  }, 200);
 }

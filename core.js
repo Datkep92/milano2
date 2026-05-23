@@ -75,7 +75,43 @@ function formatDisplayDate(dateString){
   return `${day}/${month}/${year}`;
 }
 
+// Sửa hàm calculateExpenseTotal
+function calculateExpenseTotal(date){
+  if (!appData || !appData.expenses) return 0;
+  return appData.expenses
+    .filter(x => x.date === date && !x.deleted)
+    .reduce((a,b)=>a + (b.amount || 0), 0);
+}
+
+// Sửa hàm calculateDebtTotal
+function calculateDebtTotal(date){
+  if (!appData || !appData.debtTransactions) return 0;
+  return appData.debtTransactions
+    .filter(x => x.date === date && x.type === "debt_add" && !x.deleted)
+    .reduce((a,b)=>a + (b.amount || 0), 0);
+}
+
+// Sửa hàm calculateCustomerDebt
+function calculateCustomerDebt(customer){
+  if (!appData || !appData.debtTransactions) return 0;
+  let balance = 0;
+  appData.debtTransactions
+    .filter(x => x.customer === customer && !x.deleted)
+    .forEach(item=>{
+      if(item.type === "debt_add"){
+        balance += item.amount || 0;
+      }else{
+        balance -= item.amount || 0;
+      }
+    });
+  return balance;
+}
+
+// Sửa hàm getReport
 function getReport(date){
+  if (!appData || !appData.reports) {
+    return { bank:0, cash:0, reserve:0, status:"draft" };
+  }
   if(!appData.reports[date]){
     appData.reports[date] = {
       bank:0,
@@ -87,6 +123,31 @@ function getReport(date){
   return appData.reports[date];
 }
 
+// Đảm bảo appData luôn có cấu trúc đúng khi load
+function ensureAppDataStructure() {
+  if (!appData) {
+    appData = {
+      reports: {},
+      expenses: [],
+      debtTransactions: [],
+      categories: { expenses: [], customers: [] },
+      recent: { expenses: [], customers: [] }
+    };
+  }
+  if (!appData.reports) appData.reports = {};
+  if (!appData.expenses) appData.expenses = [];
+  if (!appData.debtTransactions) appData.debtTransactions = [];
+  if (!appData.categories) appData.categories = { expenses: [], customers: [] };
+  if (!appData.categories.expenses) appData.categories.expenses = [];
+  if (!appData.categories.customers) appData.categories.customers = [];
+  if (!appData.recent) appData.recent = { expenses: [], customers: [] };
+  if (!appData.recent.expenses) appData.recent.expenses = [];
+  if (!appData.recent.customers) appData.recent.customers = [];
+}
+
+// Gọi hàm này sau khi khởi tạo appData
+ensureAppDataStructure();
+
 function openPopup(id){
   document.getElementById(id).classList.remove("hidden");
 }
@@ -95,31 +156,7 @@ function closePopup(id){
   document.getElementById(id).classList.add("hidden");
 }
 
-function calculateExpenseTotal(date){
-  return appData.expenses
-    .filter(x => x.date === date && !x.deleted)
-    .reduce((a,b)=>a+b.amount,0);
-}
 
-function calculateDebtTotal(date){
-  return appData.debtTransactions
-    .filter(x => x.date === date && x.type === "debt_add" && !x.deleted)
-    .reduce((a,b)=>a+b.amount,0);
-}
-
-function calculateCustomerDebt(customer){
-  let balance = 0;
-  appData.debtTransactions
-    .filter(x => x.customer === customer && !x.deleted)
-    .forEach(item=>{
-      if(item.type === "debt_add"){
-        balance += item.amount;
-      }else{
-        balance -= item.amount;
-      }
-    });
-  return balance;
-}
 
 function addCategory(type,name){
   if(!name) return;
@@ -235,3 +272,23 @@ document.addEventListener(
   },
   { passive:false }
 );
+
+// Khởi tạo dữ liệu mặc định nếu chưa có
+function initDefaultData() {
+  if (!appData || Object.keys(appData).length === 0) {
+    appData = {
+      reports: {},
+      expenses: [],
+      debtTransactions: [],
+      categories: { expenses: [], customers: [] },
+      recent: { expenses: [], customers: [] }
+    };
+    saveData();
+  }
+  
+  // Đảm bảo cấu trúc đúng
+  ensureAppDataStructure();
+}
+
+// Gọi khi load
+initDefaultData();
