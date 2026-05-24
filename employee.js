@@ -655,85 +655,133 @@ function loadPaymentDraft() {
 // ========== XEM CHI TIẾT CHI PHÍ HÔM NAY ==========
 openExpenseHistory.onclick = (e) => {
   e.stopPropagation();
-  
+
   const date = getCurrentDate();
-  console.log("Đang xem chi phí ngày:", date); // Debug
-  
+
   let html = "";
-  const list = appData.expenses.filter(x => x.date === date && !x.deleted);
-  
-  detailTitle.innerText = `📋 Chi Phí Ngày ${formatDisplayDate(date)}`;
-  
-  if (list.length === 0) {
-    html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí</div>';
+  const list = appData.expenses.filter(
+    x => x.date === date && !x.deleted
+  );
+
+  detailTitle.innerText =
+    `📋 Chi Phí Ngày ${formatDisplayDate(date)}`;
+
+  if (!list.length) {
+
+    html = `
+      <div class="empty-text">
+        📭 Chưa có dữ liệu chi phí
+      </div>
+    `;
+
   } else {
+
     list.forEach(item => {
+
       html += `
         <div class="history-item">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong>📦 ${item.name}</strong>
-            <span style="color: var(--danger); font-weight: 600;">${formatMoney(item.amount)}</span>
+
+          <div class="history-name">
+            📦 ${item.name}
           </div>
-          ${item.qty ? `<div style="font-size: 13px; color: var(--text-light);">📊 Số lượng: ${item.qty}</div>` : ''}
-          <div class="action-row" style="margin-top: 10px;">
-            <button class="action-btn edit-btn" onclick="editExpense('${item.id}')">✏️ Sửa</button>
-            <button class="action-btn delete-btn" onclick="deleteExpense('${item.id}')">🗑️ Xóa</button>
+
+          <div class="history-amount debt">
+            ${formatMoney(item.amount)}
           </div>
+
+          <div class="history-actions">
+
+            <button
+              class="action-btn edit-btn"
+              onclick="editExpense('${item.id}')"
+              title="Sửa">
+              ✏️
+            </button>
+
+            <button
+              class="action-btn delete-btn"
+              onclick="deleteExpense('${item.id}')"
+              title="Xóa">
+              🗑️
+            </button>
+
+          </div>
+
         </div>
       `;
     });
   }
-  
+
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 };
+
 
 // ========== XEM CHI TIẾT CÔNG NỢ PHÁT SINH HÔM NAY ==========
 openDebtHistory.onclick = (e) => {
   e.stopPropagation();
-  
+
   const date = getCurrentDate();
-  console.log("Đang xem công nợ ngày:", date); // Debug
-  
+
   let html = "";
-  const list = appData.debtTransactions.filter(x => x.date === date && !x.deleted);
-  
-  detailTitle.innerText = `🧾 Công Nợ Phát Sinh Ngày ${formatDisplayDate(date)}`;
-  
-  if (list.length === 0) {
-    html = '<div class="empty-text">📭 Chưa có công nợ phát sinh</div>';
-  } else list.forEach(item => {
-  const isDebt = item.type === "debt_add";
+  const list = appData.debtTransactions.filter(
+    x => x.date === date && !x.deleted
+  );
 
-  html += `
-    <div class="history-item">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <strong>${item.customer || "Khách hàng"}</strong>
-        <span style="
-          color:${isDebt ? 'var(--danger)' : 'var(--success)'};
-          font-weight:700;
-        ">
-          ${isDebt ? '+' : '-'} ${formatMoney(item.amount)}
-        </span>
+  detailTitle.innerText =
+    `🧾 Công Nợ Phát Sinh Ngày ${formatDisplayDate(date)}`;
+
+  if (!list.length) {
+
+    html = `
+      <div class="empty-text">
+        📭 Chưa có công nợ phát sinh
       </div>
+    `;
 
-      <div class="action-row" style="margin-top:10px;">
-        <button class="action-btn edit-btn" onclick="editDebt('${item.id}')">
-          ✏️ Sửa
-        </button>
+  } else {
 
-        <button class="action-btn delete-btn" onclick="deleteDebt('${item.id}')">
-          🗑️ Xóa
-        </button>
-      </div>
-    </div>
-  `;
-});
-  
+    list.forEach(item => {
+
+      const isDebt = item.type === "debt_add";
+
+      html += `
+        <div class="history-item">
+
+          <div class="history-name">
+            ${item.customer || "Khách hàng"}
+          </div>
+
+          <div class="history-amount ${isDebt ? "debt" : "payment"}">
+            ${isDebt ? "+" : "-"}${formatMoney(item.amount)}
+          </div>
+
+          <div class="history-actions">
+
+            <button
+              class="action-btn edit-btn"
+              onclick="editDebt('${item.id}')"
+              title="Sửa">
+              ✏️
+            </button>
+
+            <button
+              class="action-btn delete-btn"
+              onclick="deleteDebt('${item.id}')"
+              title="Xóa">
+              🗑️
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    });
+  }
+
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 };
-
 
 
 // ========== DATE NAVIGATION ==========

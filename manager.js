@@ -157,7 +157,7 @@ function getDateRange(){
     return {
       start: start,
       end: end,
-      label: `Kỳ: ${formatDate(start)} → ${formatDate(end)}`,
+      label: `${formatDate(start)} → ${formatDate(end)}`,
       type: "period"
     };
   }
@@ -177,11 +177,7 @@ function isDateInRange(dateStr, range){
 function renderManagerDashboard(){
   const range = getDateRange();
   if(periodDisplay) periodDisplay.innerText = range.label;
-  if(statsTitle){
-    if(range.type === "day") statsTitle.innerText = "📌 Thống Kê Ngày";
-    else if(range.type === "month") statsTitle.innerText = "📆 Thống Kê Tháng";
-    else statsTitle.innerText = "📅 Thống Kê Kỳ (20→19)";
-  }
+  
   
   let bank = 0, cash = 0;
   Object.entries(appData.reports).forEach(([date, report]) => {
@@ -351,45 +347,37 @@ if(exportDebtBtn){
 }
 
 function showExpenseDetail(name){
-  detailTitle.innerText = "Chi Tiết: " + name;
+
+  detailTitle.innerText = "📋 Chi Phí: " + name;
 
   let html = "";
 
   appData.expenses
     .filter(x => x.name === name && !x.deleted)
-    .sort((a, b) => b.date.localeCompare(a.date))
+    .sort((a,b) => b.date.localeCompare(a.date))
     .forEach(item => {
 
       html += `
         <div class="history-item">
 
-          <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-          ">
-            <strong>📅 ${item.date}</strong>
-
-            <span style="
-              color:var(--danger);
-              font-weight:700;
-            ">
-              ${formatMoney(item.amount)}
-            </span>
+          <div class="history-name">
+            📅 ${item.date}
           </div>
 
-          ${item.qty ? `
-            <div style="margin-top:6px;">
-              📦 Số lượng: ${item.qty}
-            </div>
-          ` : ""}
+          <div class="history-amount debt">
+            ${formatMoney(item.amount)}
+          </div>
 
         </div>
       `;
     });
 
-  if(html === ""){
-    html = '<div class="empty-text">Không có dữ liệu</div>';
+  if(!html){
+    html = `
+      <div class="empty-text">
+        Không có dữ liệu
+      </div>
+    `;
   }
 
   detailContent.innerHTML = html;
@@ -397,19 +385,20 @@ function showExpenseDetail(name){
 }
 
 function showDebtDetail(customer){
-  detailTitle.innerText = "Công Nợ: " + customer;
+
+  detailTitle.innerText = "🧾 Công Nợ: " + customer;
 
   let balance = 0;
   let html = "";
 
   appData.debtTransactions
     .filter(x => x.customer === customer && !x.deleted)
-    .sort((a, b) => a.date.localeCompare(b.date))
+    .sort((a,b) => a.date.localeCompare(b.date))
     .forEach(item => {
 
       if(item.type === "debt_add"){
         balance += item.amount;
-      } else {
+      }else{
         balance -= item.amount;
       }
 
@@ -418,35 +407,31 @@ function showDebtDetail(customer){
       html += `
         <div class="history-item">
 
-          <div style="
-            display:flex;
-            justify-content:space-between;
-            align-items:center;
-          ">
-            <strong>${item.date}</strong>
-
-            <span style="
-              color:${isDebt ? 'var(--danger)' : 'var(--success)'};
-              font-weight:700;
+          <div class="history-name">
+            📅 ${item.date}
+            <div style="
+              font-size:11px;
+              color:var(--text-light);
+              font-weight:500;
             ">
-              ${isDebt ? '+' : '-'} ${formatMoney(item.amount)}
-            </span>
+              Còn lại: ${formatMoney(balance)}
+            </div>
           </div>
 
-          <div style="
-            margin-top:6px;
-            font-size:14px;
-            font-weight:600;
-          ">
-            Còn lại: ${formatMoney(balance)}
+          <div class="history-amount ${isDebt ? "debt" : "payment"}">
+            ${isDebt ? "+" : "-"}${formatMoney(item.amount)}
           </div>
 
         </div>
       `;
     });
 
-  if(html === ""){
-    html = '<div class="empty-text">Không có dữ liệu</div>';
+  if(!html){
+    html = `
+      <div class="empty-text">
+        Không có dữ liệu
+      </div>
+    `;
   }
 
   detailContent.innerHTML = html;

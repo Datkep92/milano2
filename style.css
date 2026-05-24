@@ -418,15 +418,22 @@ body {
   color: var(--text-light);
 }
 
-/* ========== FAB BUTTONS ========== */
-.fab-group {
+.fab-group{
   position: fixed;
-  right: 20px;
-  bottom: 24px;
+  left: 12px;
+  bottom: 120px;
+
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  z-index: 100;
+  gap: 10px;
+
+  z-index: 999;
+}
+
+.fab{
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
 }
 
 .fab {
@@ -666,45 +673,7 @@ textarea {
   min-height: 80px;
 }
 
-/* ========== HISTORY ITEMS ========== */
-.history-item {
-  padding: 14px;
-  border-bottom: 1px solid var(--border);
-}
 
-.history-item:last-child {
-  border-bottom: none;
-}
-
-.action-row {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.action-btn {
-  flex: 1;
-  padding: 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-secondary);
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.edit-btn:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.delete-btn:hover {
-  background: var(--danger-light);
-  border-color: var(--danger);
-  color: var(--danger);
-}
 
 /* ========== TOAST ========== */
 #toast {
@@ -1351,4 +1320,193 @@ textarea {
     grid-column:1 / -1;
   }
 
+}
+
+.history-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+
+  padding:10px 12px;
+  margin-bottom:8px;
+
+  background:var(--bg-tertiary);
+  border:1px solid var(--border);
+  border-radius:12px;
+}
+
+.history-name{
+  flex:1;
+  min-width:0;
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+
+  font-size:14px;
+  font-weight:600;
+}
+
+.history-amount{
+  flex-shrink:0;
+
+  font-size:14px;
+  font-weight:700;
+}
+
+.history-amount.debt{
+  color:var(--danger);
+}
+
+.history-amount.payment{
+  color:var(--success);
+}
+
+.history-actions{
+  display:flex;
+  gap:4px;
+  flex-shrink:0;
+}
+
+.history-actions .action-btn{
+  width:32px;
+  height:32px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:0;
+  margin:0;
+
+  border:none;
+  border-radius:8px;
+
+  flex:none;
+}
+
+.history-actions .edit-btn{
+  background:var(--accent-light);
+  color:var(--accent);
+}
+
+.history-actions .delete-btn{
+  background:var(--danger-light);
+  color:var(--danger);
+}
+
+/* =========================
+   TOP NAV
+========================= */
+
+.tabs{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+
+  background:var(--bg-secondary);
+
+  border:1px solid var(--border);
+  border-radius:16px;
+
+  padding:8px;
+  margin-bottom:16px;
+
+  box-shadow:var(--shadow-sm);
+}
+
+.tabs-logo{
+  font-size:16px;
+  font-weight:800;
+  color:var(--text);
+
+  flex-shrink:0;
+}
+
+.tabs-center{
+  display:flex;
+  align-items:center;
+  gap:4px;
+
+  flex:1;
+  justify-content:center;
+}
+
+.tab-btn{
+  border:none;
+  background:transparent;
+
+  padding:10px 14px;
+
+  border-radius:10px;
+
+  font-size:14px;
+  font-weight:600;
+
+  color:var(--text-light);
+
+  cursor:pointer;
+
+  transition:.2s;
+}
+
+.tab-btn.active{
+  background:var(--text);
+  color:#fff;
+}
+
+.tab-btn::after{
+  display:none;
+}
+
+.logout-btn{
+  border:none;
+
+  background:var(--danger-light);
+  color:var(--danger);
+
+  height:40px;
+  min-width:40px;
+
+  padding:0 12px;
+
+  border-radius:10px;
+
+  font-size:13px;
+  font-weight:700;
+
+  cursor:pointer;
+
+  flex-shrink:0;
+}
+
+.logout-btn:hover{
+  background:var(--danger);
+  color:#fff;
+}
+
+/* Mobile */
+
+@media(max-width:560px){
+
+  .tabs{
+    padding:6px;
+    gap:6px;
+  }
+
+  .tabs-logo{
+    font-size:14px;
+  }
+
+  .tab-btn{
+    padding:9px 10px;
+    font-size:13px;
+  }
+
+  .logout-btn{
+    min-width:36px;
+    height:36px;
+    padding:0 10px;
+  }
 }
