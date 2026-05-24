@@ -1,6 +1,5 @@
 // ========== HỆ THỐNG ĐĂNG NHẬP ==========
 
-// DOM elements
 const loginScreen = document.getElementById("loginScreen");
 const appContainer = document.getElementById("appContainer");
 const loginEmail = document.getElementById("loginEmail");
@@ -16,10 +15,11 @@ const showLogin = document.getElementById("showLogin");
 const loginError = document.getElementById("loginError");
 const registerError = document.getElementById("registerError");
 
-// Biến kiểm tra
 let isAppShowing = false;
+let currentUserRole = null;
+let cachedRole = null;
+let cachedRoleUid = null;
 
-// Lấy device ID
 function getDeviceId() {
   let deviceId = localStorage.getItem("deviceId");
   if (!deviceId) {
@@ -29,7 +29,6 @@ function getDeviceId() {
   return deviceId;
 }
 
-// Lưu thông tin đăng nhập
 async function saveLoginInfo(user) {
   const deviceId = getDeviceId();
   const loginInfo = {
@@ -49,7 +48,6 @@ async function saveLoginInfo(user) {
   }
 }
 
-// Đăng nhập
 async function login(email, password) {
   try {
     if (loginError) loginError.innerText = "";
@@ -77,7 +75,6 @@ async function login(email, password) {
   }
 }
 
-// Đăng ký
 async function register(email, password, confirmPassword) {
   try {
     if (registerError) registerError.innerText = "";
@@ -126,7 +123,6 @@ async function register(email, password, confirmPassword) {
   }
 }
 
-// Đăng xuất
 async function logout() {
   try {
     const user = auth.currentUser;
@@ -135,13 +131,8 @@ async function logout() {
       await database.ref(`users/${user.uid}/devices/${deviceId}/lastLogout`).set(firebase.database.ServerValue.TIMESTAMP);
     }
     
-    // Dọn dẹp trước khi logout
-    if (typeof cleanupFirebaseSync === 'function') {
-      cleanupFirebaseSync();
-    }
-    if (typeof cleanupRealtimeUI === 'function') {
-      cleanupRealtimeUI();
-    }
+    if (typeof cleanupFirebaseSync === 'function') cleanupFirebaseSync();
+    if (typeof cleanupRealtimeUI === 'function') cleanupRealtimeUI();
     
     await auth.signOut();
     
@@ -159,6 +150,24 @@ async function logout() {
   }
 }
 
+async function getUserRole(uid, forceRefresh = false) {
+  if (!forceRefresh && cachedRoleUid === uid && cachedRole !== null) {
+    return cachedRole;
+  }
+  
+  try {
+    const snapshot = await database.ref(`users/${uid}/role`).once('value');
+    const role = snapshot.val();
+    cachedRole = role || ROLES.STAFF;
+    cachedRoleUid = uid;
+    currentUserRole = cachedRole;
+    return cachedRole;
+  } catch (error) {
+    console.error("Lỗi lấy role:", error);
+    return ROLES.STAFF;
+  }
+}
+
 async function showApp(user) {
   if (isAppShowing) {
     console.log("⏭️ App đã hiển thị");
@@ -169,12 +178,10 @@ async function showApp(user) {
   if (loginScreen) loginScreen.classList.add("hidden");
   if (appContainer) appContainer.classList.remove("hidden");
   
-  // Cập nhật role
   const role = await getUserRole(user.uid);
   const isAdminUser = role === ROLES.ADMIN;
   window.isAdminSync = () => isAdminUser;
   
-  // Ẩn/hiện tab quản lý
   const managerTabBtn = document.querySelector('.tab-btn[data-tab="managerTab"]');
   if (managerTabBtn) {
     if (isAdminUser) {
@@ -184,7 +191,55 @@ async function showApp(user) {
     }
   }
   
-  // Khởi tạo Firebase Sync (tự động load data và setup realtime)
+  // ========== ẨN/HIỆN FAB THEO ROLE ==========
+  const expenseFab = document.getElementById("expenseFab");
+  const debtFab = document.getElementById("debtFab");
+  const paymentFab = document.getElementById("paymentFab");
+  const adminExpenseFab = document.getElementById("adminExpenseFab");
+  
+  // Ẩn/hiện nút admin expense (chỉ admin mới thấy)
+  if (adminExpenseFab) {
+    if (isAdminUser) {
+      adminExpenseFab.classList.remove("hidden");
+    } else {
+      adminExpenseFab.classList.add("hidden");
+    }
+  }
+  
+  // Lắng nghe chuyển tab để ẩn/hiện FAB
+  const setupTabListeners = () => {
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.removeEventListener('click', handleTabClick);
+      btn.addEventListener('click', handleTabClick);
+    });
+  };
+  
+  const handleTabClick = (e) => {
+    const btn = e.currentTarget;
+    const isAdminTab = btn.dataset.tab === "managerTab";
+    
+    if (expenseFab) expenseFab.classList.toggle('hidden', isAdminTab);
+    if (debtFab) debtFab.classList.toggle('hidden', isAdminTab);
+    if (paymentFab) paymentFab.classList.toggle('hidden', isAdminTab);
+    
+    // Nút admin expense chỉ hiện ở tab Admin và chỉ khi là admin
+    if (adminExpenseFab) {
+      if (isAdminTab && isAdminUser) {
+        adminExpenseFab.classList.remove('hidden');
+      } else {
+        adminExpenseFab.classList.add('hidden');
+      }
+    }
+  };
+  
+  setupTabListeners();
+  
+  // Khởi tạo initial state (mặc định đang ở tab Report)
+  if (expenseFab) expenseFab.classList.remove('hidden');
+  if (debtFab) debtFab.classList.remove('hidden');
+  if (paymentFab) paymentFab.classList.remove('hidden');
+  if (adminExpenseFab) adminExpenseFab.classList.add('hidden');
+  
   if (typeof initFirebaseSync === 'function') {
     await initFirebaseSync();
   }
@@ -193,23 +248,21 @@ async function showApp(user) {
     initRealtimeUI();
   }
   
-  // Render UI lần đầu
   setTimeout(() => {
     if (typeof loadTodayData === 'function') loadTodayData();
     if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
     if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
     if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
+    if (typeof renderRecentAdminExpenses === 'function') renderRecentAdminExpenses();
     if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
   }, 200);
 }
 
-// Ẩn app
 function hideApp() {
   if (loginScreen) loginScreen.classList.remove("hidden");
   if (appContainer) appContainer.classList.add("hidden");
 }
 
-// Kiểm tra user đầu tiên
 async function checkFirstUser() {
   try {
     const user = auth.currentUser;
@@ -238,7 +291,6 @@ async function checkFirstUser() {
   }
 }
 
-// ========== EVENT LISTENERS ==========
 if (loginBtn) {
   loginBtn.onclick = () => {
     const email = loginEmail?.value.trim() || "";
@@ -290,7 +342,6 @@ if (showLogin) {
   };
 }
 
-// Enter để đăng nhập
 if (loginPassword) {
   loginPassword.addEventListener("keypress", (e) => {
     if (e.key === "Enter" && loginBtn) loginBtn.click();
@@ -303,7 +354,6 @@ if (registerConfirmPassword) {
   });
 }
 
-// Theo dõi auth state
 auth.onAuthStateChanged(async (user) => {
   if (user) {
     if (!isAppShowing) {
@@ -314,3 +364,5 @@ auth.onAuthStateChanged(async (user) => {
     isAppShowing = false;
   }
 });
+
+window.getUserRole = getUserRole;

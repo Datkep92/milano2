@@ -2,20 +2,24 @@ const STORAGE_KEY = "cafe_manager_full_v1";
 
 let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
   reports:{},
-  expenses:[],
+  expenses:[],        // Chi phí nhân viên
+  adminExpenses:[],   // THÊM MỚI: Chi phí quản lý
   debtTransactions:[],
   categories:{
-    expenses:[],
+    expenses:[],      // Danh mục chi phí nhân viên
+    adminExpenses:[], // THÊM MỚI: Danh mục chi phí quản lý
     customers:[]
   },
   recent:{
-    expenses:[],
+    expenses:[],      // Recent chi phí nhân viên
+    adminExpenses:[], // THÊM MỚI: Recent chi phí quản lý
     customers:[]
   }
 };
 
 let editingExpenseId = null;
 let editingDebtId = null;
+let editingAdminExpenseId = null; // THÊM MỚI
 
 let toastTimeout;
 const toast = document.getElementById("toast");
@@ -64,18 +68,16 @@ function getToday(){
   return `${year}-${month}-${day}`;
 }
 
-// Lấy ngày hiện tại đang chọn trên giao diện
 function getCurrentDate(){
-  return reportDate.value;
+  return reportDate ? reportDate.value : getToday();
 }
 
-// Format ngày khi hiển thị (không ảnh hưởng đến logic so sánh)
 function formatDisplayDate(dateString){
   const [year, month, day] = dateString.split('-');
   return `${day}/${month}/${year}`;
 }
 
-// Sửa hàm calculateExpenseTotal
+// Tính tổng chi phí nhân viên
 function calculateExpenseTotal(date){
   if (!appData || !appData.expenses) return 0;
   return appData.expenses
@@ -83,7 +85,15 @@ function calculateExpenseTotal(date){
     .reduce((a,b)=>a + (b.amount || 0), 0);
 }
 
-// Sửa hàm calculateDebtTotal
+// THÊM MỚI: Tính tổng chi phí quản lý
+function calculateAdminExpenseTotal(date){
+  if (!appData || !appData.adminExpenses) return 0;
+  return appData.adminExpenses
+    .filter(x => x.date === date && !x.deleted)
+    .reduce((a,b)=>a + (b.amount || 0), 0);
+}
+
+// Tính tổng công nợ phát sinh
 function calculateDebtTotal(date){
   if (!appData || !appData.debtTransactions) return 0;
   return appData.debtTransactions
@@ -91,7 +101,7 @@ function calculateDebtTotal(date){
     .reduce((a,b)=>a + (b.amount || 0), 0);
 }
 
-// Sửa hàm calculateCustomerDebt
+// Tính công nợ của khách hàng
 function calculateCustomerDebt(customer){
   if (!appData || !appData.debtTransactions) return 0;
   let balance = 0;
@@ -107,7 +117,28 @@ function calculateCustomerDebt(customer){
   return balance;
 }
 
-// Sửa hàm getReport
+// Tính tổng công nợ tất cả khách hàng
+function calculateTotalDebtAll() {
+  if (!appData || !appData.debtTransactions) return 0;
+  
+  const allCustomers = new Set();
+  if (appData.categories?.customers) {
+    appData.categories.customers.forEach(c => allCustomers.add(c));
+  }
+  if (appData.recent?.customers) {
+    appData.recent.customers.forEach(c => allCustomers.add(c));
+  }
+  appData.debtTransactions.forEach(t => {
+    if (!t.deleted && t.customer) allCustomers.add(t.customer);
+  });
+  
+  let total = 0;
+  allCustomers.forEach(customer => {
+    total += calculateCustomerDebt(customer);
+  });
+  return total;
+}
+
 function getReport(date){
   if (!appData || !appData.reports) {
     return { bank:0, cash:0, reserve:0, status:"draft" };
@@ -123,40 +154,42 @@ function getReport(date){
   return appData.reports[date];
 }
 
-// Đảm bảo appData luôn có cấu trúc đúng khi load
 function ensureAppDataStructure() {
   if (!appData) {
     appData = {
       reports: {},
       expenses: [],
+      adminExpenses: [],
       debtTransactions: [],
-      categories: { expenses: [], customers: [] },
-      recent: { expenses: [], customers: [] }
+      categories: { expenses: [], adminExpenses: [], customers: [] },
+      recent: { expenses: [], adminExpenses: [], customers: [] }
     };
   }
   if (!appData.reports) appData.reports = {};
   if (!appData.expenses) appData.expenses = [];
+  if (!appData.adminExpenses) appData.adminExpenses = [];
   if (!appData.debtTransactions) appData.debtTransactions = [];
-  if (!appData.categories) appData.categories = { expenses: [], customers: [] };
+  if (!appData.categories) appData.categories = { expenses: [], adminExpenses: [], customers: [] };
   if (!appData.categories.expenses) appData.categories.expenses = [];
+  if (!appData.categories.adminExpenses) appData.categories.adminExpenses = [];
   if (!appData.categories.customers) appData.categories.customers = [];
-  if (!appData.recent) appData.recent = { expenses: [], customers: [] };
+  if (!appData.recent) appData.recent = { expenses: [], adminExpenses: [], customers: [] };
   if (!appData.recent.expenses) appData.recent.expenses = [];
+  if (!appData.recent.adminExpenses) appData.recent.adminExpenses = [];
   if (!appData.recent.customers) appData.recent.customers = [];
 }
 
-// Gọi hàm này sau khi khởi tạo appData
 ensureAppDataStructure();
 
 function openPopup(id){
-  document.getElementById(id).classList.remove("hidden");
+  const popup = document.getElementById(id);
+  if(popup) popup.classList.remove("hidden");
 }
 
 function closePopup(id){
-  document.getElementById(id).classList.add("hidden");
+  const popup = document.getElementById(id);
+  if(popup) popup.classList.add("hidden");
 }
-
-
 
 function addCategory(type,name){
   if(!name) return;
@@ -212,13 +245,11 @@ function isInPeriod(date,period){
   return d >= period.start && d <= period.end;
 }
 
-// Sửa lại trong core.js
 function isEditable(date){
   const today = getToday();
   if(date === today) return true;
   const report = getReport(date);
   
-  // Nếu ngày đã chốt, chỉ admin mới được sửa
   if (report.status === "completed") {
     return window.isAdminSync ? window.isAdminSync() : false;
   }
@@ -230,65 +261,128 @@ function isAddable(date){
   if(date === today) return true;
   const report = getReport(date);
   
-  // Ngày cũ đã chốt: chỉ admin được thêm
   if (report.status === "completed") {
     return window.isAdminSync ? window.isAdminSync() : false;
   }
-  // Ngày cũ chưa chốt: không ai được thêm
   return false;
 }
 
-/* =========================
-   BLOCK MOBILE ZOOM
-========================= */
-
-document.addEventListener(
-  "gesturestart",
-  function(e){
-
-    e.preventDefault();
-
+// ========== HÀM RENDER TOÀN BỘ UI ==========
+function renderAllUI() {
+  console.log("🎨 renderAllUI() - Đang render toàn bộ giao diện...");
+  
+  const currentDate = getCurrentDate();
+  const today = getToday();
+  
+  if (typeof loadTodayData === 'function') {
+    loadTodayData();
   }
-);
+  
+  if (typeof renderCustomerDebtList === 'function') {
+    renderCustomerDebtList();
+  }
+  
+  const totalDebtElement = document.getElementById("totalDebtAll");
+  if (totalDebtElement) {
+    totalDebtElement.innerText = formatMoney(calculateTotalDebtAll());
+  }
+  
+  const activeTab = document.querySelector('.tab-content.active')?.id;
+  if (activeTab === 'managerTab') {
+    if (typeof renderManagerDashboard === 'function') {
+      renderManagerDashboard();
+    }
+    if (typeof renderAdminExpenseStats === 'function') {
+      const range = typeof getDateRange === 'function' ? getDateRange() : null;
+      if (range) renderAdminExpenseStats(range);
+    }
+  }
+  
+  if (typeof renderRecentExpenses === 'function') {
+    renderRecentExpenses();
+  }
+  if (typeof renderRecentCustomers === 'function') {
+    renderRecentCustomers();
+  }
+  if (typeof renderRecentAdminExpenses === 'function') {
+    renderRecentAdminExpenses();
+  }
+  
+  const report = appData?.reports?.[currentDate];
+  
+  const expenseTotalEl = document.getElementById("expenseTotal");
+  if (expenseTotalEl) {
+    expenseTotalEl.innerText = formatMoney(calculateExpenseTotal(currentDate));
+  }
+  
+  const debtTotalEl = document.getElementById("debtTotal");
+  if (debtTotalEl) {
+    debtTotalEl.innerText = formatMoney(calculateDebtTotal(currentDate));
+  }
+  
+  const dayStatus = document.getElementById("dayStatus");
+  if (dayStatus && report) {
+    dayStatus.innerHTML = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
+  }
+  
+  const bankInput = document.getElementById("bankInput");
+  const cashInput = document.getElementById("cashInput");
+  const reserveInput = document.getElementById("reserveInput");
+  
+  if (bankInput && report) bankInput.value = (report.bank || 0).toLocaleString("vi-VN");
+  if (cashInput && report) cashInput.value = (report.cash || 0).toLocaleString("vi-VN");
+  if (reserveInput && report) reserveInput.value = (report.reserve || 0).toLocaleString("vi-VN");
+  
+  console.log("✅ renderAllUI() - Hoàn tất!");
+}
 
+function refreshUIData() {
+  console.log("🔄 refreshUIData() - Cập nhật dữ liệu...");
+  
+  if (typeof loadTodayData === 'function') {
+    loadTodayData();
+  }
+  if (typeof renderCustomerDebtList === 'function') {
+    renderCustomerDebtList();
+  }
+  const totalDebtElement = document.getElementById("totalDebtAll");
+  if (totalDebtElement) {
+    totalDebtElement.innerText = formatMoney(calculateTotalDebtAll());
+  }
+}
 
+// ========== BLOCK MOBILE ZOOM ==========
+document.addEventListener("gesturestart", function(e){
+  e.preventDefault();
+});
 
 let lastTouchEnd = 0;
+document.addEventListener("touchend", function(e){
+  const now = Date.now();
+  if(now - lastTouchEnd <= 300){
+    e.preventDefault();
+  }
+  lastTouchEnd = now;
+}, { passive: false });
 
-document.addEventListener(
-  "touchend",
-  function(e){
-
-    const now = Date.now();
-
-    if(now - lastTouchEnd <= 300){
-
-      e.preventDefault();
-
-    }
-
-    lastTouchEnd = now;
-
-  },
-  { passive:false }
-);
-
-// Khởi tạo dữ liệu mặc định nếu chưa có
 function initDefaultData() {
   if (!appData || Object.keys(appData).length === 0) {
     appData = {
       reports: {},
       expenses: [],
+      adminExpenses: [],
       debtTransactions: [],
-      categories: { expenses: [], customers: [] },
-      recent: { expenses: [], customers: [] }
+      categories: { expenses: [], adminExpenses: [], customers: [] },
+      recent: { expenses: [], adminExpenses: [], customers: [] }
     };
     saveData();
   }
-  
-  // Đảm bảo cấu trúc đúng
   ensureAppDataStructure();
 }
 
-// Gọi khi load
 initDefaultData();
+
+window.renderAllUI = renderAllUI;
+window.refreshUIData = refreshUIData;
+window.calculateTotalDebtAll = calculateTotalDebtAll;
+window.calculateAdminExpenseTotal = calculateAdminExpenseTotal;

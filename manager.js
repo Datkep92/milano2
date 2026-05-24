@@ -1,9 +1,10 @@
-// ========== DOM ELEMENTS (dùng var có kiểm tra) ==========
+// ========== DOM ELEMENTS ==========
 if(typeof periodLabel === 'undefined') var periodLabel = document.getElementById("periodLabel");
 if(typeof managerBank === 'undefined') var managerBank = document.getElementById("managerBank");
 if(typeof managerCash === 'undefined') var managerCash = document.getElementById("managerCash");
 if(typeof managerExpense === 'undefined') var managerExpense = document.getElementById("managerExpense");
 if(typeof managerDebt === 'undefined') var managerDebt = document.getElementById("managerDebt");
+if(typeof managerAdminExpense === 'undefined') var managerAdminExpense = document.getElementById("managerAdminExpense");
 if(typeof managerExpenseList === 'undefined') var managerExpenseList = document.getElementById("managerExpenseList");
 if(typeof managerDebtList === 'undefined') var managerDebtList = document.getElementById("managerDebtList");
 
@@ -36,6 +37,19 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     document.querySelectorAll(".tab-content").forEach(x => x.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
+    
+    // Ẩn/hiện FAB khi chuyển tab
+    const expenseFab = document.getElementById("expenseFab");
+    const debtFab = document.getElementById("debtFab");
+    const paymentFab = document.getElementById("paymentFab");
+    const adminExpenseFab = document.getElementById("adminExpenseFab");
+    
+    const isAdminTab = btn.dataset.tab === "managerTab";
+    if(expenseFab) expenseFab.classList.toggle('hidden', isAdminTab);
+    if(debtFab) debtFab.classList.toggle('hidden', isAdminTab);
+    if(paymentFab) paymentFab.classList.toggle('hidden', isAdminTab);
+    if(adminExpenseFab) adminExpenseFab.classList.toggle('hidden', !isAdminTab);
+    
     if(btn.dataset.tab === "managerTab") renderManagerDashboard();
   };
 });
@@ -178,14 +192,26 @@ function renderManagerDashboard(){
   const range = getDateRange();
   if(periodDisplay) periodDisplay.innerText = range.label;
   
+  window.currentRange = range;
   
   let bank = 0, cash = 0;
+  const bankDetails = [];
+  const cashDetails = [];
+  
   Object.entries(appData.reports).forEach(([date, report]) => {
     if(isDateInRange(date, range)){
-      bank += report.bank || 0;
-      cash += report.cash || 0;
+      const bankAmount = report.bank || 0;
+      const cashAmount = report.cash || 0;
+      bank += bankAmount;
+      cash += cashAmount;
+      
+      if(bankAmount > 0) bankDetails.push({ date, amount: bankAmount });
+      if(cashAmount > 0) cashDetails.push({ date, amount: cashAmount });
     }
   });
+  
+  window.currentBankDetails = bankDetails.sort((a,b) => b.date.localeCompare(a.date));
+  window.currentCashDetails = cashDetails.sort((a,b) => b.date.localeCompare(a.date));
   
   const expense = appData.expenses
     .filter(x => !x.deleted && isDateInRange(x.date, range))
@@ -195,13 +221,103 @@ function renderManagerDashboard(){
     .filter(x => !x.deleted && x.type === "debt_add" && isDateInRange(x.date, range))
     .reduce((a, b) => a + (b.amount || 0), 0);
   
+  // THÊM MỚI: Chi phí quản lý
+  const adminExpense = appData.adminExpenses
+    .filter(x => !x.deleted && isDateInRange(x.date, range))
+    .reduce((a, b) => a + (b.amount || 0), 0);
+  
   managerBank.innerText = formatMoney(bank);
   managerCash.innerText = formatMoney(cash);
   managerExpense.innerText = formatMoney(expense);
   managerDebt.innerText = formatMoney(debt);
+  if(managerAdminExpense) managerAdminExpense.innerText = formatMoney(adminExpense);
   
   renderExpenseStats(range);
   renderDebtStats(range);
+  renderAdminExpenseStats(range); // THÊM MỚI
+  
+  setupClickableManagerBoxes();
+  setupScrollToAdminExpense(); // THÊM MỚI
+}
+
+function setupClickableManagerBoxes() {
+  const bankBox = document.querySelector('.manager-box:first-child');
+  if (bankBox && !bankBox.hasAttribute('data-clickable')) {
+    bankBox.setAttribute('data-clickable', 'true');
+    bankBox.style.cursor = 'pointer';
+    bankBox.onclick = () => showTransactionDetail('bank', 'Chuyển khoản', window.currentBankDetails || []);
+  }
+  
+  const cashBox = document.querySelector('.manager-box:nth-child(2)');
+  if (cashBox && !cashBox.hasAttribute('data-clickable')) {
+    cashBox.setAttribute('data-clickable', 'true');
+    cashBox.style.cursor = 'pointer';
+    cashBox.onclick = () => showTransactionDetail('cash', 'Tiền mặt', window.currentCashDetails || []);
+  }
+  
+  // THÊM MỚI: Click vào ô Chi phí quản lý sẽ scroll xuống
+  const adminExpenseBox = document.getElementById('adminExpenseBox');
+  if (adminExpenseBox && !adminExpenseBox.hasAttribute('data-clickable')) {
+    adminExpenseBox.setAttribute('data-clickable', 'true');
+    adminExpenseBox.style.cursor = 'pointer';
+    adminExpenseBox.onclick = () => scrollToAdminExpenseList();
+  }
+}
+
+function setupScrollToAdminExpense() {
+  const adminExpenseBox = document.getElementById('adminExpenseBox');
+  if (adminExpenseBox) {
+    adminExpenseBox.style.cursor = 'pointer';
+    adminExpenseBox.title = 'Click để xem danh sách chi phí quản lý';
+  }
+}
+
+function scrollToAdminExpenseList() {
+  const adminExpenseList = document.getElementById('managerAdminExpenseList');
+  if (adminExpenseList) {
+    adminExpenseList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    adminExpenseList.style.transition = 'background 0.5s';
+    adminExpenseList.style.background = 'var(--warning-light)';
+    setTimeout(() => {
+      adminExpenseList.style.background = '';
+    }, 1000);
+    showToast("📋 Đã cuộn đến danh sách chi phí quản lý");
+  } else {
+    showToast("⚠️ Chưa có dữ liệu chi phí quản lý");
+  }
+}
+
+function showTransactionDetail(type, title, details) {
+  if (!details || details.length === 0) {
+    showToast(`📭 Không có dữ liệu ${title} trong kỳ này`);
+    return;
+  }
+  
+  const range = window.currentRange;
+  const periodText = range ? range.label : '';
+  
+  detailTitle.innerText = `💰 ${title} - ${periodText}`;
+  
+  let html = `
+    <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 12px; text-align: center;">
+      <div style="font-size: 12px; color: var(--text-light);">Tổng ${title}</div>
+      <div style="font-size: 28px; font-weight: 700; color: var(--success);">${formatMoney(details.reduce((a,b) => a + b.amount, 0))}</div>
+    </div>
+    <div style="font-weight: 600; margin-bottom: 12px; font-size: 14px;">📋 Chi tiết theo ngày:</div>
+  `;
+  
+  details.forEach(item => {
+    const formattedDate = formatDisplayDate(item.date);
+    html += `
+      <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="history-name">📅 ${formattedDate}</div>
+        <div class="history-amount" style="color: var(--success); font-weight: 700;">${formatMoney(item.amount)}</div>
+      </div>
+    `;
+  });
+  
+  detailContent.innerHTML = html;
+  openPopup("detailPopup");
 }
 
 function renderExpenseStats(range){
@@ -217,40 +333,60 @@ function renderExpenseStats(range){
   Object.keys(grouped).sort().forEach(name => {
     const total = grouped[name].reduce((a, b) => a + b.amount, 0);
     const qtyTotal = grouped[name].reduce((a, b) => a + (b.qty || 0), 0);
-    html += `
-  <div
-    class="manager-item"
-    onclick="showExpenseDetail('${name.replace(/'/g, "\\'")}')"
-    style="
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-    "
-  >
-
-    <span style="
-      flex:1;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-    ">
-      📦 ${name}
-    </span>
-
-    <strong style="
-      flex-shrink:0;
-      white-space:nowrap;
-    ">
-      ${qtyTotal > 0 ? `SL:${qtyTotal} • ` : ""}
-      ${formatMoney(total)}
-    </strong>
-
-  </div>
-`;
+    html += `<div class="manager-item" onclick="showExpenseDetail('${name.replace(/'/g, "\\'")}')" style="display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;">
+      <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">📦 ${name}</span>
+      <strong style="flex-shrink:0; white-space:nowrap;">${qtyTotal > 0 ? `SL:${qtyTotal} • ` : ""}${formatMoney(total)}</strong>
+    </div>`;
   });
   if(html === "") html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí</div>';
   managerExpenseList.innerHTML = html;
+}
+
+// THÊM MỚI: Render chi phí quản lý
+function renderAdminExpenseStats(range){
+  const grouped = {};
+  appData.adminExpenses
+    .filter(x => !x.deleted && isDateInRange(x.date, range))
+    .forEach(item => {
+      if(!grouped[item.name]) grouped[item.name] = [];
+      grouped[item.name].push(item);
+    });
+  
+  let html = "";
+  Object.keys(grouped).sort().forEach(name => {
+    const total = grouped[name].reduce((a, b) => a + b.amount, 0);
+    const qtyTotal = grouped[name].reduce((a, b) => a + (b.qty || 0), 0);
+    html += `<div class="manager-item" onclick="showAdminExpenseDetail('${name.replace(/'/g, "\\'")}')" style="display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;">
+      <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🏢 ${name}</span>
+      <strong style="flex-shrink:0; white-space:nowrap;">${qtyTotal > 0 ? `SL:${qtyTotal} • ` : ""}${formatMoney(total)}</strong>
+    </div>`;
+  });
+  if(html === "") html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí quản lý</div>';
+  
+  let container = document.getElementById("managerAdminExpenseList");
+  if(!container) {
+    const managerTab = document.getElementById("managerTab");
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = 'adminExpenseCard';
+    card.innerHTML = `
+      <div class="card-header">
+        <h2>📋 Chi Phí Quản Lý</h2>
+        <button class="small-btn" id="exportAdminExpenseBtn">Xuất</button>
+      </div>
+      <div id="managerAdminExpenseList"></div>
+    `;
+    const expenseCard = document.querySelector('#managerTab .card:nth-child(3)');
+    if(expenseCard) {
+      expenseCard.insertAdjacentElement('afterend', card);
+    } else {
+      managerTab.appendChild(card);
+    }
+    container = document.getElementById("managerAdminExpenseList");
+    
+    document.getElementById("exportAdminExpenseBtn")?.addEventListener('click', () => exportAdminExpenses());
+  }
+  if(container) container.innerHTML = html;
 }
 
 function renderDebtStats(range){
@@ -283,31 +419,10 @@ function renderDebtStats(range){
   Object.keys(balanceAtEnd).sort().forEach(customer => {
     const balance = balanceAtEnd[customer];
     if(balance > 0){
-      html += `
-  <div
-    class="manager-item"
-    onclick="showDebtDetail('${customer.replace(/'/g, "\\'")}')"
-    style="
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-    "
-  >
-
-    <span style="flex:1;">
-      👤 ${customer}
-    </span>
-
-    <strong style="
-      color:var(--danger);
-      white-space:nowrap;
-    ">
-   Nợ: ${formatMoney(balance)}
-    </strong>
-
-  </div>
-`;
+      html += `<div class="manager-item" onclick="showDebtDetail('${customer.replace(/'/g, "\\'")}')" style="display:flex; justify-content:space-between; align-items:center; gap:10px; cursor:pointer;">
+        <span style="flex:1;">👤 ${customer}</span>
+        <strong style="color:var(--danger); white-space:nowrap;">Nợ: ${formatMoney(balance)}</strong>
+      </div>`;
     }
   });
   if(html === "") html = '<div class="empty-text">✅ Không có khách nợ</div>';
@@ -346,94 +461,69 @@ if(exportDebtBtn){
   };
 }
 
+function exportAdminExpenses() {
+  const range = getDateRange();
+  const adminExpenses = appData.adminExpenses.filter(x => !x.deleted && isDateInRange(x.date, range));
+  const data = adminExpenses.map(e => [e.date, e.name, e.qty || 0, e.amount]);
+  exportToCSV(data, `chi_phi_quan_ly_${range.label.replace(/[\/\s→:]/g, "_")}.csv`, ["Ngày", "Tên", "Số lượng", "Số tiền"]);
+  showToast("✓ Đã xuất file chi phí quản lý");
+}
+
 function showExpenseDetail(name){
-
   detailTitle.innerText = "📋 Chi Phí: " + name;
-
   let html = "";
-
   appData.expenses
     .filter(x => x.name === name && !x.deleted)
     .sort((a,b) => b.date.localeCompare(a.date))
     .forEach(item => {
-
-      html += `
-        <div class="history-item">
-
-          <div class="history-name">
-            📅 ${item.date}
-          </div>
-
-          <div class="history-amount debt">
-            ${formatMoney(item.amount)}
-          </div>
-
-        </div>
-      `;
+      html += `<div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="history-name">📅 ${formatDisplayDate(item.date)}</div>
+        <div class="history-amount debt">${formatMoney(item.amount)}</div>
+      </div>`;
     });
+  if(!html) html = '<div class="empty-text">Không có dữ liệu</div>';
+  detailContent.innerHTML = html;
+  openPopup("detailPopup");
+}
 
-  if(!html){
-    html = `
-      <div class="empty-text">
-        Không có dữ liệu
-      </div>
-    `;
-  }
-
+// THÊM MỚI: Hiển thị chi tiết chi phí quản lý
+function showAdminExpenseDetail(name){
+  detailTitle.innerText = "🏢 Chi Phí Quản Lý: " + name;
+  let html = "";
+  appData.adminExpenses
+    .filter(x => x.name === name && !x.deleted)
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .forEach(item => {
+      html += `<div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="history-name">📅 ${formatDisplayDate(item.date)}</div>
+        <div class="history-amount debt">${formatMoney(item.amount)}</div>
+      </div>`;
+    });
+  if(!html) html = '<div class="empty-text">Không có dữ liệu</div>';
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 }
 
 function showDebtDetail(customer){
-
   detailTitle.innerText = "🧾 Công Nợ: " + customer;
-
   let balance = 0;
   let html = "";
-
   appData.debtTransactions
     .filter(x => x.customer === customer && !x.deleted)
     .sort((a,b) => a.date.localeCompare(b.date))
     .forEach(item => {
-
-      if(item.type === "debt_add"){
-        balance += item.amount;
-      }else{
-        balance -= item.amount;
-      }
-
+      if(item.type === "debt_add") balance += item.amount;
+      else balance -= item.amount;
       const isDebt = item.type === "debt_add";
-
-      html += `
-        <div class="history-item">
-
-          <div class="history-name">
-            📅 ${item.date}
-            <div style="
-              font-size:11px;
-              color:var(--text-light);
-              font-weight:500;
-            ">
-              Còn lại: ${formatMoney(balance)}
-            </div>
-          </div>
-
-          <div class="history-amount ${isDebt ? "debt" : "payment"}">
-            ${isDebt ? "+" : "-"}${formatMoney(item.amount)}
-          </div>
-
+      html += `<div class="history-item" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <div class="history-name">
+          📅 ${formatDisplayDate(item.date)}
+          <div style="font-size:11px; color:var(--text-light);">Còn lại: ${formatMoney(balance)}</div>
         </div>
-      `;
+        <div class="history-amount ${isDebt ? 'debt' : 'payment'}">${isDebt ? '+' : '-'}${formatMoney(item.amount)}</div>
+      </div>`;
     });
-
-  if(!html){
-    html = `
-      <div class="empty-text">
-        Không có dữ liệu
-      </div>
-    `;
-  }
-
+  if(!html) html = '<div class="empty-text">Không có dữ liệu</div>';
   detailContent.innerHTML = html;
   openPopup("detailPopup");
 }
@@ -443,46 +533,47 @@ if(!document.querySelector('#manager-styles')) {
   const style = document.createElement('style');
   style.id = 'manager-styles';
   style.textContent = `
-    .manager-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; }
-    .manager-item:hover { background: #f9f9f9; }
+    .manager-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+    .manager-item:hover { background: var(--bg-tertiary); }
     .manager-item-stats { display: flex; justify-content: space-between; margin-top: 6px; font-size: 13px; color: #666; }
     .positive { color: #27ae60; }
     .negative { color: #e74c3c; }
     .empty-text { text-align: center; padding: 20px; color: #999; font-style: italic; }
+    .manager-box { cursor: pointer; transition: all 0.2s; }
+    .manager-box:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
   `;
   document.head.appendChild(style);
 }
-// Thêm hàm tính tổng công nợ tất cả khách hàng (cho manager)
+
 function calculateTotalDebtAll() {
   const allCustomers = new Set();
-  
   appData.categories.customers.forEach(c => allCustomers.add(c));
   appData.recent.customers.forEach(c => allCustomers.add(c));
   appData.debtTransactions.forEach(t => {
     if (!t.deleted && t.customer) allCustomers.add(t.customer);
   });
-  
   let total = 0;
   allCustomers.forEach(customer => {
     total += calculateCustomerDebt(customer);
   });
-  
   return total;
 }
-// ========== TỔNG CÔNG NỢ HIỆN TẠI ==========
+
 function updateManagerTotalDebt() {
   const managerTotalDebt = document.getElementById("managerTotalDebt");
-  if (managerTotalDebt && typeof window.calculateTotalDebtAll === 'function') {
-    managerTotalDebt.innerText = formatMoney(window.calculateTotalDebtAll());
+  if (managerTotalDebt) {
+    managerTotalDebt.innerText = formatMoney(calculateTotalDebtAll());
   }
 }
 
-// Cập nhật trong renderManagerDashboard
 const originalRenderManagerDashboard = renderManagerDashboard;
 renderManagerDashboard = function() {
   originalRenderManagerDashboard();
   updateManagerTotalDebt();
 };
 
-// ========== INIT ==========
+// Export
+window.showAdminExpenseDetail = showAdminExpenseDetail;
+window.renderAdminExpenseStats = renderAdminExpenseStats;
+
 renderManagerDashboard();
