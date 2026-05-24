@@ -208,7 +208,7 @@ function checkMissingReport() {
   const date = yesterday.toISOString().split("T")[0];
   const report = appData.reports[date];
   if (!report || report.status !== "completed") {
-    alert("⚠️ Hôm qua chưa chốt báo cáo");
+    showToast("⚠️ Hôm qua chưa chốt báo cáo");
   }
 }
 checkMissingReport();

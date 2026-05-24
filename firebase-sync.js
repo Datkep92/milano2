@@ -44,7 +44,7 @@ function saveToLocal(data, skipVersion = false) {
   return data._version;
 }
 
-// ========== SYNC LÊN FIREBASE - DÙNG STORE_ID CHUNG ==========
+// ========== SYNC LÊN FIREBASE - CHO PHÉP CẢ ADMIN VÀ NHÂN VIÊN ==========
 async function syncToFirebase() {
   if (window._isRealtimeUpdate) {
     console.log("⏭️ Bỏ qua sync (đang nhận dữ liệu từ realtime)");
@@ -70,14 +70,8 @@ async function syncToFirebase() {
     const role = await getUserRole(user.uid);
     const isAdminUser = role === ROLES.ADMIN;
     
-    // Chỉ ADMIN mới có quyền ghi dữ liệu lên Firebase
-    if (!isAdminUser) {
-      console.log("⚠️ Nhân viên không có quyền ghi dữ liệu lên server");
-      isSyncing = false;
-      return;
-    }
-    
-    console.log(`🔄 Admin ${user.email} đang đồng bộ dữ liệu lên server...`);
+    // CẢ ADMIN VÀ NHÂN VIÊN ĐỀU ĐƯỢC GHI DỮ LIỆU
+    console.log(`🔄 ${isAdminUser ? 'Admin' : 'Nhân viên'} ${user.email} đang đồng bộ dữ liệu lên server...`);
     
     // Lấy tất cả ngày có dữ liệu thay đổi
     const allDates = new Set();
@@ -98,7 +92,8 @@ async function syncToFirebase() {
           ...localData.reports[date],
           _syncedAt: firebase.database.ServerValue.TIMESTAMP,
           _syncedBy: user.uid,
-          _syncedByEmail: user.email
+          _syncedByEmail: user.email,
+          _syncedByRole: role
         });
         syncPromises.push(promise);
       }
@@ -113,7 +108,9 @@ async function syncToFirebase() {
             amount: exp.amount,
             qty: exp.qty || 0,
             deleted: exp.deleted || false,
-            _modifiedAt: exp._modifiedAt || Date.now()
+            _modifiedAt: exp._modifiedAt || Date.now(),
+            _modifiedBy: user.email,
+            _modifiedByRole: role
           };
         });
         const promise = database.ref(`cafeData/${STORE_ID}/expenses/${year}/${month}/${day}`).set(expensesMap);
@@ -132,7 +129,9 @@ async function syncToFirebase() {
             note: debt.note || '',
             method: debt.method || '',
             deleted: debt.deleted || false,
-            _modifiedAt: debt._modifiedAt || Date.now()
+            _modifiedAt: debt._modifiedAt || Date.now(),
+            _modifiedBy: user.email,
+            _modifiedByRole: role
           };
         });
         const promise = database.ref(`cafeData/${STORE_ID}/debtTransactions/${year}/${month}/${day}`).set(debtsMap);
@@ -140,20 +139,22 @@ async function syncToFirebase() {
       }
     }
     
-    // Sync metadata
-    const metadata = {
-      version: localData._version || 0,
-      lastSync: firebase.database.ServerValue.TIMESTAMP,
-      syncedBy: user.uid,
-      syncedByEmail: user.email,
-      categories: localData.categories,
-      recent: localData.recent
-    };
-    syncPromises.push(database.ref(`cafeData/${STORE_ID}/metadata`).set(metadata));
+    // Sync metadata - CHỈ ADMIN MỚI ĐƯỢC CẬP NHẬT METADATA
+    if (isAdminUser) {
+      const metadata = {
+        version: localData._version || 0,
+        lastSync: firebase.database.ServerValue.TIMESTAMP,
+        syncedBy: user.uid,
+        syncedByEmail: user.email,
+        categories: localData.categories,
+        recent: localData.recent
+      };
+      syncPromises.push(database.ref(`cafeData/${STORE_ID}/metadata`).set(metadata));
+    }
     
     await Promise.all(syncPromises);
     
-    console.log(`✅ Admin đã đồng bộ ${syncPromises.length} mục lên server (v${localData._version})`);
+    console.log(`✅ ${isAdminUser ? 'Admin' : 'Nhân viên'} đã đồng bộ ${syncPromises.length} mục lên server (v${localData._version || 1})`);
     
   } catch (error) {
     console.error("❌ Lỗi sync:", error);

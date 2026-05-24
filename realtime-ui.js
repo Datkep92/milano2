@@ -1,4 +1,4 @@
-// ========== REALTIME UI - FIX UI KHÔNG RENDER ==========
+// ========== REALTIME UI - SỬ DỤNG RENDERALLUI ==========
 
 let uiListenersInitialized = false;
 let activeListeners = [];
@@ -10,130 +10,18 @@ let pendingRefreshData = {
   hasMetadata: false
 };
 
-// Hàm render UI trực tiếp - CÓ LOG CHI TIẾT
-function renderUINow() {
-  console.log("🔄 === BẮT ĐẦU RENDER UI ===");
-  
-  const today = getToday();
-  const currentDate = reportDate ? reportDate.value : today;
-  
-  // KIỂM TRA DỮ LIỆU TRONG appData
-  console.log("📊 appData hiện tại:", {
-    version: appData?._version,
-    reportsCount: Object.keys(appData?.reports || {}).length,
-    expensesCount: appData?.expenses?.length || 0,
-    debtsCount: appData?.debtTransactions?.length || 0
-  });
-  
-  // 1. Cập nhật loadTodayData
-  if (typeof loadTodayData === 'function') {
-    console.log("📌 Gọi loadTodayData()");
-    loadTodayData();
-  } else {
-    console.error("❌ loadTodayData không tồn tại!");
-  }
-  
-  // 2. Cập nhật danh sách công nợ
-  if (typeof renderCustomerDebtList === 'function') {
-    console.log("📌 Gọi renderCustomerDebtList()");
-    renderCustomerDebtList();
-  }
-  
-  // 3. Cập nhật tổng công nợ
-  if (typeof updateTotalDebtDisplay === 'function') {
-    console.log("📌 Gọi updateTotalDebtDisplay()");
-    updateTotalDebtDisplay();
-  }
-  
-  // 4. Cập nhật manager dashboard
-  const activeTab = document.querySelector('.tab-content.active')?.id;
-  if (activeTab === 'managerTab' && typeof renderManagerDashboard === 'function') {
-    console.log("📌 Gọi renderManagerDashboard()");
-    renderManagerDashboard();
-  }
-  
-  // 5. Cập nhật recent lists
-  if (typeof renderRecentExpenses === 'function') {
-    console.log("📌 Gọi renderRecentExpenses()");
-    renderRecentExpenses();
-  }
-  if (typeof renderRecentCustomers === 'function') {
-    console.log("📌 Gọi renderRecentCustomers()");
-    renderRecentCustomers();
-  }
-  
-  // 6. TRỰC TIẾP CẬP NHẬT DOM
-  console.log("📌 Cập nhật DOM trực tiếp...");
-  
-  const report = appData?.reports?.[currentDate];
-  const expenseTotal = calculateExpenseTotal ? calculateExpenseTotal(currentDate) : 0;
-  const debtTotal = calculateDebtTotal ? calculateDebtTotal(currentDate) : 0;
-  
-  // Cập nhật expense total
-  const expenseTotalEl = document.getElementById("expenseTotal");
-  if (expenseTotalEl) {
-    const newValue = formatMoney(expenseTotal);
-    console.log(`  - expenseTotal: ${expenseTotalEl.innerText} → ${newValue}`);
-    expenseTotalEl.innerText = newValue;
-  }
-  
-  // Cập nhật debt total
-  const debtTotalEl = document.getElementById("debtTotal");
-  if (debtTotalEl) {
-    const newValue = formatMoney(debtTotal);
-    console.log(`  - debtTotal: ${debtTotalEl.innerText} → ${newValue}`);
-    debtTotalEl.innerText = newValue;
-  }
-  
-  // Cập nhật day status
-  const dayStatus = document.getElementById("dayStatus");
-  if (dayStatus && report) {
-    const newStatus = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
-    console.log(`  - dayStatus: ${dayStatus.innerHTML} → ${newStatus}`);
-    dayStatus.innerHTML = newStatus;
-  }
-  
-  // Cập nhật các input
-  const bankInput = document.getElementById("bankInput");
-  const cashInput = document.getElementById("cashInput");
-  const reserveInput = document.getElementById("reserveInput");
-  
-  if (bankInput && report) {
-    const newValue = (report.bank || 0).toLocaleString("vi-VN");
-    console.log(`  - bankInput: ${bankInput.value} → ${newValue}`);
-    bankInput.value = newValue;
-  }
-  if (cashInput && report) {
-    const newValue = (report.cash || 0).toLocaleString("vi-VN");
-    console.log(`  - cashInput: ${cashInput.value} → ${newValue}`);
-    cashInput.value = newValue;
-  }
-  if (reserveInput && report) {
-    const newValue = (report.reserve || 0).toLocaleString("vi-VN");
-    console.log(`  - reserveInput: ${reserveInput.value} → ${newValue}`);
-    reserveInput.value = newValue;
-  }
-  
-  // Cập nhật tổng nợ tất cả khách
-  const totalDebtAll = document.getElementById("totalDebtAll");
-  if (totalDebtAll && typeof calculateTotalDebtAll === 'function') {
-    const newValue = formatMoney(calculateTotalDebtAll());
-    console.log(`  - totalDebtAll: ${totalDebtAll.innerText} → ${newValue}`);
-    totalDebtAll.innerText = newValue;
-  }
-  
-  console.log("✅ === RENDER UI HOÀN TẤT ===");
-}
-
-// Hàm refresh gộp
+// Hàm refresh gộp - gọi renderAllUI 1 lần duy nhất
 function scheduleUIRefresh(type) {
+  // Đánh dấu loại cần refresh
   if (type === 'report') pendingRefreshData.hasReport = true;
   if (type === 'expenses') pendingRefreshData.hasExpenses = true;
   if (type === 'debts') pendingRefreshData.hasDebts = true;
   if (type === 'metadata') pendingRefreshData.hasMetadata = true;
   
+  // Clear timer cũ
   if (refreshTimer) clearTimeout(refreshTimer);
   
+  // Đặt timer mới - chỉ 100ms
   refreshTimer = setTimeout(() => {
     const types = [];
     if (pendingRefreshData.hasReport) types.push('báo cáo');
@@ -142,8 +30,15 @@ function scheduleUIRefresh(type) {
     if (pendingRefreshData.hasMetadata) types.push('danh mục');
     
     console.log(`📡 Cập nhật từ thiết bị khác: ${types.join(', ')}`);
-    renderUINow();
     
+    // GỌI HÀM RENDER TOÀN BỘ UI TỪ CORE.JS
+    if (typeof renderAllUI === 'function') {
+      renderAllUI();
+    } else {
+      console.error("❌ renderAllUI không tồn tại!");
+    }
+    
+    // Reset flags
     pendingRefreshData = {
       hasReport: false,
       hasExpenses: false,
@@ -182,11 +77,6 @@ function listenToMetadata() {
         if (changed) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
           window.appData = localData;
-          
-          if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
-          if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
-          if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
-          
           scheduleUIRefresh('metadata');
         }
       }
@@ -198,7 +88,7 @@ function listenToMetadata() {
   activeListeners.push({ ref, callback });
 }
 
-// Lắng nghe báo cáo - QUAN TRỌNG: Cập nhật đúng appData
+// Lắng nghe báo cáo
 function listenToCurrentReport() {
   const today = getToday();
   const [year, month, day] = today.split('-');
@@ -209,21 +99,15 @@ function listenToCurrentReport() {
   const callback = (snapshot) => {
     const reportData = snapshot.val();
     if (reportData && !window._isRealtimeUpdate) {
-      console.log(`📡 Nhận báo cáo ngày ${today} từ thiết bị khác:`, reportData);
+      console.log(`📡 Nhận báo cáo ngày ${today} từ thiết bị khác`);
       
-      // Lấy dữ liệu hiện tại
       let localData = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!localData) localData = { reports: {}, expenses: [], debtTransactions: [] };
       if (!localData.reports) localData.reports = {};
       
-      // Cập nhật report
       localData.reports[today] = reportData;
-      
-      // Lưu lại
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
       window.appData = localData;
-      
-      console.log("✅ Đã cập nhật appData.reports[" + today + "] =", reportData);
       
       scheduleUIRefresh('report');
     }
@@ -245,7 +129,7 @@ function listenToCurrentExpenses() {
   const callback = (snapshot) => {
     const expensesMap = snapshot.val();
     if (!window._isRealtimeUpdate) {
-      console.log(`📡 Nhận chi phí ngày ${today} từ thiết bị khác:`, expensesMap);
+      console.log(`📡 Nhận chi phí ngày ${today} từ thiết bị khác`);
       
       let localData = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!localData) localData = { reports: {}, expenses: [], debtTransactions: [] };
@@ -264,8 +148,6 @@ function listenToCurrentExpenses() {
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
       window.appData = localData;
-      
-      console.log(`✅ Đã cập nhật ${localData.expenses.filter(e => e.date === today).length} expenses cho ngày ${today}`);
       
       scheduleUIRefresh('expenses');
     }
@@ -287,7 +169,7 @@ function listenToCurrentDebts() {
   const callback = (snapshot) => {
     const debtsMap = snapshot.val();
     if (!window._isRealtimeUpdate) {
-      console.log(`📡 Nhận công nợ ngày ${today} từ thiết bị khác:`, debtsMap);
+      console.log(`📡 Nhận công nợ ngày ${today} từ thiết bị khác`);
       
       let localData = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!localData) localData = { reports: {}, expenses: [], debtTransactions: [] };
@@ -306,8 +188,6 @@ function listenToCurrentDebts() {
       
       localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
       window.appData = localData;
-      
-      console.log(`✅ Đã cập nhật ${localData.debtTransactions.filter(d => d.date === today).length} debts cho ngày ${today}`);
       
       scheduleUIRefresh('debts');
     }
@@ -342,7 +222,7 @@ function initRealtimeUI() {
   
   uiListenersInitialized = true;
   
-  console.log("✅ Realtime UI đã sẵn sàng");
+  console.log("✅ Realtime UI đã sẵn sàng - UI sẽ tự động cập nhật qua renderAllUI()");
 }
 
 // Dọn dẹp
@@ -364,4 +244,3 @@ function cleanupRealtimeUI() {
 // Export
 window.initRealtimeUI = initRealtimeUI;
 window.cleanupRealtimeUI = cleanupRealtimeUI;
-window.renderUINow = renderUINow;
