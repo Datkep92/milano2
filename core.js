@@ -181,15 +181,53 @@ function ensureAppDataStructure() {
 
 ensureAppDataStructure();
 
+
+// ========== CẢI TIẾN POPUP - ĐÓNG KHI CLICK RA NGOÀI HOẶC ESC ==========
 function openPopup(id){
   const popup = document.getElementById(id);
-  if(popup) popup.classList.remove("hidden");
+  if(popup) {
+    popup.classList.remove("hidden");
+    
+    // Thêm sự kiện click ra ngoài để đóng popup
+    setTimeout(() => {
+      const handleClickOutside = (e) => {
+        // Nếu click vào chính popup background
+        if (e.target === popup) {
+          closePopup(id);
+          document.removeEventListener('click', handleClickOutside);
+        }
+      };
+      popup.addEventListener('click', handleClickOutside);
+      
+      // Lưu để cleanup sau
+      popup._clickOutsideHandler = handleClickOutside;
+    }, 0);
+  }
 }
 
 function closePopup(id){
   const popup = document.getElementById(id);
-  if(popup) popup.classList.add("hidden");
+  if(popup) {
+    popup.classList.add("hidden");
+    
+    // Dọn dẹp sự kiện
+    if(popup._clickOutsideHandler) {
+      popup.removeEventListener('click', popup._clickOutsideHandler);
+      delete popup._clickOutsideHandler;
+    }
+  }
 }
+
+// Thêm sự kiện ESC để đóng popup đang mở
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    // Tìm tất cả popup đang mở
+    const openPopups = document.querySelectorAll('.popup:not(.hidden)');
+    openPopups.forEach(popup => {
+      closePopup(popup.id);
+    });
+  }
+});
 
 function addCategory(type,name){
   if(!name) return;

@@ -1510,3 +1510,250 @@ textarea {
     padding:0 10px;
   }
 }
+
+@media (max-width:560px){
+
+  .view-mode-group{
+    width:100%;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:6px;
+  }
+
+  .view-mode-btn{
+    width:100%;
+    height:42px;
+    padding:0;
+    font-size:13px;
+  }
+
+}
+
+/* Hiệu ứng nhấp nháy cho cảnh báo */
+@keyframes blink {
+  0% { opacity: 1; background: var(--danger-light); }
+  50% { opacity: 0.7; background: var(--danger); color: white; }
+  100% { opacity: 1; background: var(--danger-light); }
+}
+/* Thêm vào style.css */
+.input-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  background: var(--bg-tertiary) !important;
+}
+
+.warning-border {
+  border-color: var(--danger) !important;
+  animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+/* Suggestions dropdown */
+.suggestions {
+  position: absolute;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1001;
+  width: calc(100% - 40px);
+  box-shadow: var(--shadow-md);
+}
+
+.suggestion-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--border);
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.suggestion-item .name {
+  font-weight: 500;
+}
+
+.suggestion-item .debt-info {
+  font-size: 11px;
+  color: var(--text-light);
+}
+
+.expense-action-row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  width:100%;
+}
+
+.expense-action-row #expenseAmount{
+  flex:1;
+  min-width:0;
+  margin:0;
+}
+
+.expense-action-row #saveExpenseBtn{
+  flex-shrink:0;
+  width:auto;
+  min-width:110px;
+  margin:0;
+  white-space:nowrap;
+}
+
+@media (max-width:768px){
+  .expense-action-row{
+    display:flex;
+    flex-direction:row;
+  }
+
+  .expense-action-row #expenseAmount{
+    flex:1;
+  }
+
+  .expense-action-row #saveExpenseBtn{
+    min-width:100px;
+  }
+}
+
+.debt-action-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+
+.debt-action-row #debtAmount{
+  flex:1;
+  min-width:0;
+  margin:0;
+}
+
+.debt-action-row #saveDebtBtn{
+  flex-shrink:0;
+  min-width:110px;
+  width:auto;
+  margin:0;
+  white-space:nowrap;
+}
+
+@media (max-width:768px){
+  .debt-action-row #debtAmount{
+    flex:3;
+  }
+
+  .debt-action-row #saveDebtBtn{
+    flex:1;
+    min-width:90px;
+  }
+}
+
+.popup-history-title{
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  margin:16px 0 12px;
+  padding:12px 14px;
+
+  font-size:15px;
+  font-weight:700;
+  line-height:1.4;
+
+  color:var(--text-primary,#222);
+
+  background:var(--card-bg,#fff);
+
+  border:1px solid rgba(0,0,0,.06);
+  border-radius:12px;
+
+  box-shadow:
+    0 2px 8px rgba(0,0,0,.04);
+}
+
+#expenseQty {
+    display: none;
+}
+
+/* Hoặc ẩn luôn cả thẻ div chứa nó nếu có */
+.quick-title:has(+ #expenseQty),
+.quick-title + #expenseQty {
+    display: none;
+}
+
+/* Ẩn textarea ghi chú */
+#debtNote {
+    display: none;
+}
+
+/* Ẩn luôn tiêu đề phía trên */
+.quick-title:has(+ #debtNote) {
+    display: none;
+}
+
+.input-save-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+
+.input-save-row input{
+  flex:1;
+  min-width:0;
+  margin:0;
+}
+
+.input-save-row button{
+  width:auto;
+  min-width:110px;
+  margin:0 !important;
+  flex-shrink:0;
+  white-space:nowrap;
+}
+
+@media (max-width:768px){
+  .input-save-row{
+    gap:8px;
+  }
+
+  .input-save-row button{
+    min-width:95px;
+  }
+}
+
+.admin-expense-btn {
+  background: linear-gradient(135deg, #d97706, #f59e0b);
+  border: none;
+  border-radius: 40px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-expense-btn:hover {
+  background: linear-gradient(135deg, #b45309, #d97706);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.4);
+}
+
+.admin-expense-btn:active {
+  transform: translateY(0);
+}

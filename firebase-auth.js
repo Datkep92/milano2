@@ -132,7 +132,6 @@ async function logout() {
     }
     
     if (typeof cleanupFirebaseSync === 'function') cleanupFirebaseSync();
-    if (typeof cleanupRealtimeUI === 'function') cleanupRealtimeUI();
     
     await auth.signOut();
     
@@ -240,14 +239,14 @@ async function showApp(user) {
   if (paymentFab) paymentFab.classList.remove('hidden');
   if (adminExpenseFab) adminExpenseFab.classList.add('hidden');
   
+  // ========== CHỈ KHỞI TẠO FIREBASE SYNC (KHÔNG CÓ REALTIME UI) ==========
   if (typeof initFirebaseSync === 'function') {
     await initFirebaseSync();
   }
   
-  if (typeof initRealtimeUI === 'function') {
-    initRealtimeUI();
-  }
+  // KHÔNG gọi initRealtimeUI nữa để tránh xung đột listener
   
+  // Render UI sau khi đã có dữ liệu
   setTimeout(() => {
     if (typeof loadTodayData === 'function') loadTodayData();
     if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
@@ -255,6 +254,7 @@ async function showApp(user) {
     if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
     if (typeof renderRecentAdminExpenses === 'function') renderRecentAdminExpenses();
     if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
+    if (typeof updateTotalDebtDisplay === 'function') updateTotalDebtDisplay();
   }, 200);
 }
 

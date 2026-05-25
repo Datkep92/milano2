@@ -22,7 +22,6 @@
       <input type="password" id="loginPassword" placeholder="Mật khẩu" autocomplete="current-password">
       <div id="loginError" class="error-message"></div>
       <button id="loginBtn" class="primary-btn">Đăng nhập</button>
-      <p class="toggle-link">Chưa có tài khoản? <span id="showRegister">Đăng ký</span></p>
     </div>
 
     <div id="registerForm" class="login-form hidden">
@@ -30,7 +29,6 @@
       <input type="password" id="registerPassword" placeholder="Mật khẩu" autocomplete="new-password">
       <input type="password" id="registerConfirmPassword" placeholder="Xác nhận mật khẩu" autocomplete="new-password">
       <div id="registerError" class="error-message"></div>
-      <button id="registerBtn" class="primary-btn">Đăng ký</button>
       <p class="toggle-link">Đã có tài khoản? <span id="showLogin">Đăng nhập</span></p>
     </div>
   </div>
@@ -175,7 +173,13 @@
     <!-- THÊM MỚI: Chi phí quản lý (Admin) -->
     <div class="card" id="adminExpenseCard">
       <div class="card-header">
-        <h2>📋 Chi Phí Quản Lý</h2>
+       
+        <button
+    class="admin-expense-btn"
+    id="adminExpenseFab"
+    title="Thêm chi phí quản lý">
+    ➕ Thêm chi phí Quản lý
+</button>
         <button class="small-btn" id="exportAdminExpenseBtn">Xuất</button>
       </div>
       <div id="managerAdminExpenseList"></div>
@@ -196,54 +200,94 @@
     <button class="fab" id="expenseFab" title="Thêm chi phí">💸</button>
     <button class="fab" id="debtFab" title="Thêm công nợ">🧾</button>
     <button class="fab" id="paymentFab" title="Thanh toán">💰</button>
-    <button class="fab admin-fab hidden" id="adminExpenseFab" style="background: #d97706;" title="Thêm chi phí quản lý">📋</button>
   </div>
 
-  <!-- EXPENSE POPUP (Nhân viên) -->
-  <div class="popup hidden" id="expensePopup">
-    <div class="popup-content">
-      <div class="popup-header">
-        <h2 id="expensePopupTitle">➕ Thêm Chi Phí</h2>
-        <button class="close-btn" data-close="expensePopup">✕</button>
-      </div>
-      <div class="quick-title">⚡ Thường dùng</div>
-      <div class="recent-wrap" id="recentExpenseWrap"></div>
-      <button id="addNewExpenseBtn" class="btn-outline" style="width: 100%; margin: 8px 0; padding: 12px;">+ Thêm nguyên liệu mới</button>
-      <div class="quick-title">⚡ Nhanh</div>
-      <div class="quick-money">
-        <button class="quick-money-btn">35</button>
-        <button class="quick-money-btn">50</button>
-        <button class="quick-money-btn">100</button>
-        <button class="quick-money-btn">200</button>
-      </div>
-      <input type="text" id="expenseQty" placeholder="📦 Số lượng">
-      <input type="text" id="expenseAmount" placeholder="💰 Số tiền">
-      <button class="primary-btn" id="saveExpenseBtn">💾 Lưu chi phí</button>
+  <!-- EXPENSE POPUP - PHIÊN BẢN NHANH -->
+<div class="popup hidden" id="expensePopup">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2 id="expensePopupTitle">➕ Thêm Chi Phí</h2>
+      <button class="close-btn" data-close="expensePopup">✕</button>
     </div>
-  </div>
+    
+    <!-- Ô NHẬP TÊN (CÓ GỢI Ý) -->
+    <input type="text" id="expenseNameInput" placeholder="Nhập tên chi phí nếu chưa có danh sách..." autocomplete="off" style="margin-bottom: 8px;">
+    
+    <!-- DANH SÁCH GỢI Ý NHANH -->
+    <div class="recent-wrap" id="recentExpenseWrap"></div>
+    
+    <!-- Ô NHẬP SỐ TIỀN -->
+    <div class="quick-title">💰 Nhập tiền nhanh</div>
+    <div class="quick-money" style="margin-bottom: 8px;">
+      <button class="quick-money-btn" data-amount="35000">35k</button>
+      <button class="quick-money-btn" data-amount="45000">45k</button>
+      <button class="quick-money-btn" data-amount="50000">50k</button>
+      <button class="quick-money-btn" data-amount="60000">60k</button>
+    </div>
+    <div class="expense-action-row">
+  <input
+    type="text"
+    id="expenseAmount"
+    placeholder="Nhập số tiền..."
+  >
 
-  <!-- DEBT POPUP -->
-  <div class="popup hidden" id="debtPopup">
-    <div class="popup-content">
-      <div class="popup-header">
-        <h2 id="debtPopupTitle">🧾 Thêm Công Nợ</h2>
-        <button class="close-btn" data-close="debtPopup">✕</button>
-      </div>
-      <div class="quick-title">⚡ Khách gần đây</div>
-      <div class="recent-wrap" id="recentCustomerWrap"></div>
-      <button id="addNewCustomerBtn" class="btn-outline" style="width: 100%; margin: 8px 0; padding: 12px;">+ Thêm khách hàng mới</button>
-      <div class="quick-title">⚡ Nhanh</div>
-      <div class="quick-money">
-        <button class="quick-debt-btn">50</button>
-        <button class="quick-debt-btn">100</button>
-        <button class="quick-debt-btn">200</button>
-        <button class="quick-debt-btn">500</button>
-      </div>
-      <input type="text" id="debtAmount" placeholder="💰 Số tiền">
-      <textarea id="debtNote" placeholder="📝 Ghi chú" rows="2"></textarea>
-      <button class="primary-btn" id="saveDebtBtn">💾 Lưu công nợ</button>
-    </div>
+  <button
+    class="primary-btn"
+    id="saveExpenseBtn">
+    💾 Lưu
+  </button>
+</div>
+
+    <!-- Ô NHẬP SỐ LƯỢNG (TÙY CHỌN) -->
+    <div class="quick-title">📦 Số lượng (tùy chọn)</div>
+    <input type="text" id="expenseQty" placeholder="Số lượng...">
+    
+    <!-- NÚT LƯU -->
   </div>
+</div>
+
+  <!-- DEBT POPUP - PHIÊN BẢN NHANH -->
+<div class="popup hidden" id="debtPopup">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2 id="debtPopupTitle">🧾 Thêm Công Nợ</h2>
+      <button class="close-btn" data-close="debtPopup">✕</button>
+    </div>
+    
+    <!-- Ô NHẬP TÊN KHÁCH (CÓ GỢI Ý) -->
+    <input type="text" id="debtCustomerInput" placeholder="Nhập tên khách hàng nếu chưa có..." autocomplete="off" style="margin-bottom: 8px;">
+    
+    <!-- DANH SÁCH GỢI Ý NHANH -->
+    <div class="recent-wrap" id="recentCustomerWrap"></div>
+    
+    <!-- Ô NHẬP SỐ TIỀN -->
+    <div class="quick-title">💰 Nhập tiền nhanh</div>
+    <div class="quick-money" style="margin-bottom: 8px;">
+      <button class="quick-debt-btn" data-amount="16000">16k</button>
+      <button class="quick-debt-btn" data-amount="18000">18k</button>
+      <button class="quick-debt-btn" data-amount="20000">20k</button>
+      <button class="quick-debt-btn" data-amount="22000">22k</button>
+    </div>
+    <div class="input-save-row">
+  <input
+    type="text"
+    id="debtAmount"
+    placeholder="Nhập số tiền cụ thể...">
+
+  <button
+    class="primary-btn"
+    id="saveDebtBtn">
+    💾 Lưu
+  </button>
+</div>
+
+    <!-- GHI CHÚ (TÙY CHỌN) -->
+    <div class="quick-title">📝 Ghi chú (tùy chọn)</div>
+    <textarea id="debtNote" placeholder="Ghi chú..." rows="2"></textarea>
+    
+    <!-- NÚT LƯU -->
+  </div>
+</div>
 
   <!-- PAYMENT POPUP -->
   <div class="popup hidden" id="paymentPopup">
@@ -277,28 +321,43 @@
     </div>
   </div>
 
-  <!-- ADMIN EXPENSE POPUP (Thêm mới) -->
-  <div class="popup hidden" id="adminExpensePopup">
-    <div class="popup-content">
-      <div class="popup-header">
-        <h2 id="adminExpensePopupTitle">➕ Thêm Chi Phí Quản Lý</h2>
-        <button class="close-btn" data-close="adminExpensePopup">✕</button>
-      </div>
-      <div class="quick-title">⚡ Thường dùng</div>
-      <div class="recent-wrap" id="recentAdminExpenseWrap"></div>
-      <button id="addNewAdminExpenseBtn" class="btn-outline" style="width: 100%; margin: 8px 0; padding: 12px;">+ Thêm chi phí quản lý mới</button>
-      <div class="quick-title">⚡ Nhanh</div>
-      <div class="quick-money">
-        <button class="quick-admin-money-btn">35</button>
-        <button class="quick-admin-money-btn">50</button>
-        <button class="quick-admin-money-btn">100</button>
-        <button class="quick-admin-money-btn">200</button>
-      </div>
-      <input type="text" id="adminExpenseQty" placeholder="📦 Số lượng">
-      <input type="text" id="adminExpenseAmount" placeholder="💰 Số tiền">
-      <button class="primary-btn" id="saveAdminExpenseBtn">💾 Lưu chi phí quản lý</button>
+<!-- ADMIN EXPENSE POPUP (Thêm mới) -->
+<div class="popup hidden" id="adminExpensePopup">
+  <div class="popup-content">
+    <div class="popup-header">
+      <h2 id="adminExpensePopupTitle">➕ Thêm Chi Phí Quản Lý</h2>
+      <button class="close-btn" data-close="adminExpensePopup">✕</button>
     </div>
+    
+    <!-- Ô NHẬP TÊN CHI PHÍ (TỰ ĐỘNG THÊM MỚI) -->
+    <div class="quick-title">📝 Tên chi phí quản lý</div>
+    <input type="text" id="adminExpenseNameInput" placeholder="Nhập tên chi phí..." autocomplete="off" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+    
+    <!-- DANH SÁCH GỢI Ý NHANH (THƯỜNG DÙNG) -->
+    <div class="quick-title">⚡ Thường dùng</div>
+    <div class="recent-wrap" id="recentAdminExpenseWrap" style="margin-bottom: 16px;"></div>
+    
+    <!-- SỐ TIỀN NHANH -->
+    <div class="quick-title">⚡ Chọn nhanh số tiền</div>
+    <div class="quick-money" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+      <button type="button" class="quick-admin-money-btn" data-amount="35000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">35k</button>
+      <button type="button" class="quick-admin-money-btn" data-amount="50000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">50k</button>
+      <button type="button" class="quick-admin-money-btn" data-amount="100000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">100k</button>
+      <button type="button" class="quick-admin-money-btn" data-amount="200000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">200k</button>
+    </div>
+    
+    <!-- SỐ LƯỢNG -->
+    <div class="quick-title">📦 Số lượng (tùy chọn)</div>
+    <input type="text" id="adminExpenseQty" placeholder="Số lượng..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+    
+    <!-- SỐ TIỀN -->
+    <div class="quick-title">💰 Số tiền</div>
+    <input type="text" id="adminExpenseAmount" placeholder="Nhập số tiền..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px;">
+    
+    <!-- NÚT LƯU -->
+    <button class="primary-btn" id="saveAdminExpenseBtn" style="width: 100%; padding: 12px;">💾 Lưu chi phí quản lý</button>
   </div>
+</div>
 
   <!-- POPUP: DETAIL -->
   <div class="popup hidden" id="detailPopup">
@@ -336,177 +395,258 @@
 <script src="firebase-sync.js"></script>
 <script src="firebase-auth.js"></script>
 <script src="firebase-role.js"></script>
-<script src="realtime-ui.js"></script>
+<script src="telegram.js"></script>
+
 <script src="employee.js"></script>
 <script src="manager.js"></script>
 
-<!-- Admin Expense Popup Script (xử lý riêng) -->
+<!-- Admin Expense Popup Script -->
 <script>
 // DOM elements cho Admin Expense
 const adminExpenseFab = document.getElementById("adminExpenseFab");
 const adminExpensePopup = document.getElementById("adminExpensePopup");
-const adminExpensePopupTitle = document.getElementById("adminExpensePopupTitle");
+const adminExpenseNameInput = document.getElementById("adminExpenseNameInput");
 const adminExpenseQty = document.getElementById("adminExpenseQty");
 const adminExpenseAmount = document.getElementById("adminExpenseAmount");
 const recentAdminExpenseWrap = document.getElementById("recentAdminExpenseWrap");
 const saveAdminExpenseBtn = document.getElementById("saveAdminExpenseBtn");
-const addNewAdminExpenseBtn = document.getElementById("addNewAdminExpenseBtn");
 
-// KHÔNG khai báo lại editingAdminExpenseId (đã có trong core.js)
-// KHÔNG khai báo lại selectedAdminExpenseName (dùng window.selectedAdminExpenseName)
-window.selectedAdminExpenseName = window.selectedAdminExpenseName || "";
+// Biến toàn cục
+window.editingAdminExpenseId = null;
 
-// Format input money
-if(adminExpenseAmount && typeof formatInputMoney === 'function') {
-  formatInputMoney(adminExpenseAmount);
+// Format số tiền
+function formatMoneyInput(input) {
+  if (!input) return;
+  input.addEventListener('input', function(e) {
+    let value = this.value.replace(/[^\d]/g, '');
+    if (value) {
+      value = parseInt(value, 10).toLocaleString('vi-VN');
+      this.value = value;
+    }
+  });
 }
-if(adminExpenseQty && typeof formatInputMoney === 'function') {
-  formatInputMoney(adminExpenseQty);
+formatMoneyInput(adminExpenseAmount);
+formatMoneyInput(adminExpenseQty);
+
+// Parse số từ string
+function parseMoneyValue(str) {
+  if (!str) return 0;
+  return parseInt(String(str).replace(/[^\d]/g, ''), 10) || 0;
 }
 
-// Hàm render recent admin expenses
+// Lấy ngày hiện tại
+function getCurrentDateForExpense() {
+  const reportDateInput = document.getElementById("reportDate");
+  if (reportDateInput && reportDateInput.value) {
+    return reportDateInput.value;
+  }
+  return new Date().toISOString().split('T')[0];
+}
+
+// Render danh sách gợi ý chi phí quản lý
 function renderRecentAdminExpenses() {
   if (!recentAdminExpenseWrap) return;
-  if (!appData || !appData.recent || !appData.recent.adminExpenses || appData.recent.adminExpenses.length === 0) {
+  
+  // Lấy từ recent hoặc categories
+  let adminExpenses = [];
+  if (appData?.recent?.adminExpenses && appData.recent.adminExpenses.length > 0) {
+    adminExpenses = appData.recent.adminExpenses;
+  } else if (appData?.categories?.adminExpenses) {
+    adminExpenses = appData.categories.adminExpenses;
+  }
+  
+  if (adminExpenses.length === 0) {
     recentAdminExpenseWrap.innerHTML = '<div class="empty-text">Chưa có chi phí quản lý nào</div>';
     return;
   }
-  let html = "";
-  appData.recent.adminExpenses.forEach(name => {
+  
+  let html = '';
+  adminExpenses.forEach(name => {
     if (name) {
-      html += `<button class="recent-btn" onclick="selectAdminExpenseRecent('${name.replace(/'/g, "\\'")}')">🏢 ${name}</button>`;
+      html += `<button class="recent-btn" onclick="selectAdminExpense('${name.replace(/'/g, "\\'")}')">🏢 ${name}</button>`;
     }
   });
   recentAdminExpenseWrap.innerHTML = html;
 }
 
-// Hàm chọn recent
-window.selectAdminExpenseRecent = function(name) {
-  window.selectedAdminExpenseName = name;
-  const newAdminExpenseInput = document.getElementById("newAdminExpenseInput");
-  const newAdminExpenseName = document.getElementById("newAdminExpenseName");
-  if (newAdminExpenseInput) newAdminExpenseInput.classList.add("hidden");
-  if (newAdminExpenseName) newAdminExpenseName.value = "";
+// Chọn chi phí từ gợi ý
+window.selectAdminExpense = function(name) {
+  if (adminExpenseNameInput) adminExpenseNameInput.value = name;
   if (adminExpenseAmount) adminExpenseAmount.focus();
   if (typeof showToast === 'function') showToast(`✓ Đã chọn: ${name}`);
 };
 
-// Mở popup
-if(adminExpenseFab) {
+// Mở popup thêm chi phí
+if (adminExpenseFab) {
   adminExpenseFab.onclick = () => {
     window.editingAdminExpenseId = null;
-    if(adminExpensePopupTitle) adminExpensePopupTitle.innerText = "Thêm Chi Phí Quản Lý";
+    if (adminExpenseNameInput) adminExpenseNameInput.value = '';
+    if (adminExpenseAmount) adminExpenseAmount.value = '';
+    if (adminExpenseQty) adminExpenseQty.value = '';
     renderRecentAdminExpenses();
-    window.selectedAdminExpenseName = "";
-    const newAdminExpenseName = document.getElementById("newAdminExpenseName");
-    const newAdminExpenseInput = document.getElementById("newAdminExpenseInput");
-    if(newAdminExpenseName) newAdminExpenseName.value = "";
-    if(newAdminExpenseInput) newAdminExpenseInput.classList.add("hidden");
-    if(typeof openPopup === 'function') openPopup("adminExpensePopup");
+    if (typeof openPopup === 'function') openPopup('adminExpensePopup');
     setTimeout(() => {
-      if(adminExpenseAmount) adminExpenseAmount.focus();
+      if (adminExpenseNameInput) adminExpenseNameInput.focus();
     }, 100);
   };
 }
 
-// Thêm mới chi phí quản lý
-if(addNewAdminExpenseBtn) {
-  addNewAdminExpenseBtn.onclick = () => {
-    const newName = prompt('📝 Nhập tên chi phí quản lý mới:', '');
-    if(newName && newName.trim()) {
-      const name = newName.trim();
-      window.selectedAdminExpenseName = name;
-      if(!appData.recent.adminExpenses.includes(name)) {
-        appData.recent.adminExpenses.unshift(name);
-        appData.recent.adminExpenses = appData.recent.adminExpenses.slice(0, 10);
-      }
-      if(!appData.categories.adminExpenses.includes(name)) {
-        appData.categories.adminExpenses.push(name);
-      }
-      if(typeof saveData === 'function') saveData();
-      renderRecentAdminExpenses();
-      if(adminExpenseAmount) adminExpenseAmount.focus();
-      if(typeof showToast === 'function') showToast(`✓ Đã thêm và chọn: ${name}`);
-    }
-  };
-}
-
 // Nút số tiền nhanh
-document.querySelectorAll(".quick-admin-money-btn").forEach(btn => {
+document.querySelectorAll('.quick-admin-money-btn').forEach(btn => {
   btn.onclick = () => {
-    if(adminExpenseAmount) adminExpenseAmount.value = (Number(btn.innerText) * 1000).toLocaleString("vi-VN");
+    if (adminExpenseAmount) {
+      const amount = parseInt(btn.getAttribute('data-amount') || btn.innerText.replace('k', '000'), 10);
+      adminExpenseAmount.value = amount.toLocaleString('vi-VN');
+    }
   };
 });
 
+// Hàm cập nhật recent và categories (QUAN TRỌNG: để đồng bộ)
+function updateAdminExpenseMetadata(name) {
+  if (!appData.categories) appData.categories = { expenses: [], adminExpenses: [], customers: [] };
+  if (!appData.categories.adminExpenses) appData.categories.adminExpenses = [];
+  
+  if (!appData.recent) appData.recent = { expenses: [], adminExpenses: [], customers: [] };
+  if (!appData.recent.adminExpenses) appData.recent.adminExpenses = [];
+  
+  // Thêm vào categories nếu chưa có
+  if (!appData.categories.adminExpenses.includes(name)) {
+    appData.categories.adminExpenses.push(name);
+  }
+  
+  // Thêm vào recent (đưa lên đầu)
+  appData.recent.adminExpenses = [name, ...appData.recent.adminExpenses.filter(x => x !== name)].slice(0, 10);
+  
+  console.log("📝 Đã cập nhật metadata:", {
+    categories: appData.categories.adminExpenses,
+    recent: appData.recent.adminExpenses
+  });
+}
+
 // Lưu chi phí quản lý
-if(saveAdminExpenseBtn) {
+if (saveAdminExpenseBtn) {
   saveAdminExpenseBtn.onclick = () => {
-    const date = typeof getCurrentDate === 'function' ? getCurrentDate() : (reportDate ? reportDate.value : new Date().toISOString().split('T')[0]);
-    const today = typeof getToday === 'function' ? getToday() : new Date().toISOString().split('T')[0];
+    const date = getCurrentDateForExpense();
+    const today = new Date().toISOString().split('T')[0];
     
-    if(date !== today) {
-      const report = typeof getReport === 'function' ? getReport(date) : { status: "draft" };
-      if(report.status !== "completed") {
+    // Kiểm tra ngày đã chốt chưa
+    if (date !== today) {
+      const report = typeof getReport === 'function' ? getReport(date) : { status: 'draft' };
+      if (report.status !== 'completed') {
         alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
         return;
       }
     }
     
-    const name = window.selectedAdminExpenseName;
-    const qty = typeof parseMoney === 'function' ? parseMoney(adminExpenseQty?.value) : (Number(adminExpenseQty?.value) || 0);
-    const amount = typeof parseMoney === 'function' ? parseMoney(adminExpenseAmount?.value) : (Number(adminExpenseAmount?.value) || 0);
+    const name = adminExpenseNameInput ? adminExpenseNameInput.value.trim() : '';
+    const qty = parseMoneyValue(adminExpenseQty?.value);
+    const amount = parseMoneyValue(adminExpenseAmount?.value);
     
-    if(qty < 0) { alert("Số lượng không thể âm"); return; }
-    if(amount <= 0) { alert("Nhập số tiền"); return; }
-    if(!name) { alert("Vui lòng chọn hoặc thêm tên chi phí"); return; }
+    if (!name) {
+      alert('Vui lòng nhập tên chi phí');
+      adminExpenseNameInput?.focus();
+      return;
+    }
+    if (amount <= 0) {
+      alert('Vui lòng nhập số tiền hợp lệ');
+      adminExpenseAmount?.focus();
+      return;
+    }
+    if (qty < 0) {
+      alert('Số lượng không thể âm');
+      return;
+    }
     
+    // CẬP NHẬT METADATA TRƯỚC KHI LƯU (quan trọng để đồng bộ)
+    updateAdminExpenseMetadata(name);
+    
+    // Tạo dữ liệu chi phí
     const data = {
-      id: window.editingAdminExpenseId || (typeof createId === 'function' ? createId("adminexp") : "adminexp_" + Date.now()),
+      id: window.editingAdminExpenseId || 'adminexp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       date: date,
       name: name,
       qty: qty,
       amount: amount,
       deleted: false,
-      createdBy: firebase.auth().currentUser?.email,
+      createdBy: firebase.auth().currentUser?.email || 'unknown',
       createdAt: Date.now()
     };
     
-    if(window.editingAdminExpenseId) {
+    // Lưu vào appData
+    if (window.editingAdminExpenseId) {
       const index = appData.adminExpenses.findIndex(x => x.id === window.editingAdminExpenseId);
-      if(index !== -1) appData.adminExpenses[index] = data;
+      if (index !== -1) appData.adminExpenses[index] = data;
     } else {
       appData.adminExpenses.push(data);
     }
     
-    if(typeof addCategory === 'function') addCategory("adminExpenses", name);
-    if(typeof addRecent === 'function') addRecent("adminExpenses", name);
-    if(typeof saveData === 'function') saveData();
-    if(typeof renderManagerDashboard === 'function') renderManagerDashboard();
-    if(typeof loadTodayData === 'function') loadTodayData();
-    renderRecentAdminExpenses();
-    if(typeof showToast === 'function') showToast("✓ Đã lưu chi phí quản lý");
+    // Lưu và đồng bộ (saveData sẽ tự động gọi syncToFirebase)
+    if (typeof saveData === 'function') saveData();
     
-    if(adminExpenseAmount) adminExpenseAmount.value = "";
-    if(adminExpenseQty) adminExpenseQty.value = "";
-    window.selectedAdminExpenseName = "";
-    const newAdminExpenseName = document.getElementById("newAdminExpenseName");
-    const newAdminExpenseInput = document.getElementById("newAdminExpenseInput");
-    if(newAdminExpenseName) newAdminExpenseName.value = "";
-    if(newAdminExpenseInput) newAdminExpenseInput.classList.add("hidden");
-    if(adminExpenseAmount) adminExpenseAmount.focus();
+    // Refresh UI
+    if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
+    if (typeof loadTodayData === 'function') loadTodayData();
+    renderRecentAdminExpenses();
+    
+    if (typeof showToast === 'function') showToast('✓ Đã lưu chi phí quản lý');
+    
+    // Reset form và đóng popup
+    if (adminExpenseNameInput) adminExpenseNameInput.value = '';
+    if (adminExpenseAmount) adminExpenseAmount.value = '';
+    if (adminExpenseQty) adminExpenseQty.value = '';
+    if (typeof closePopup === 'function') closePopup('adminExpensePopup');
   };
 }
 
 // Enter để lưu
-if(adminExpenseAmount) {
-  adminExpenseAmount.addEventListener("keydown", (e) => {
-    if(e.key === "Enter" && saveAdminExpenseBtn) saveAdminExpenseBtn.click();
+if (adminExpenseAmount) {
+  adminExpenseAmount.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && saveAdminExpenseBtn) saveAdminExpenseBtn.click();
   });
 }
 
 // Export functions
 window.renderRecentAdminExpenses = renderRecentAdminExpenses;
 </script>
-
+<script>
+// Lắng nghe sự kiện đồng bộ để cập nhật danh sách gợi ý
+if (typeof firebase !== 'undefined' && firebase.database) {
+  const STORE_ID = "milano_coffee_259";
+  const metadataRef = firebase.database().ref(`cafeData/${STORE_ID}/metadata`);
+  
+  metadataRef.on('value', (snapshot) => {
+    const metadata = snapshot.val();
+    if (metadata && metadata.categories && metadata.recent && window.appData) {
+      let changed = false;
+      
+      // Cập nhật categories
+      if (JSON.stringify(window.appData.categories) !== JSON.stringify(metadata.categories)) {
+        window.appData.categories = metadata.categories;
+        changed = true;
+      }
+      
+      // Cập nhật recent
+      if (JSON.stringify(window.appData.recent) !== JSON.stringify(metadata.recent)) {
+        window.appData.recent = metadata.recent;
+        changed = true;
+      }
+      
+      if (changed) {
+        console.log("📡 Đã đồng bộ danh sách chi phí quản lý từ máy khác");
+        // Refresh danh sách gợi ý
+        if (typeof renderRecentAdminExpenses === 'function') {
+          renderRecentAdminExpenses();
+        }
+        if (typeof renderManagerDashboard === 'function') {
+          renderManagerDashboard();
+        }
+        if (typeof showToast === 'function') {
+          showToast("📡 Đã cập nhật danh sách chi phí quản lý");
+        }
+      }
+    }
+  });
+}
+</script>
 </body>
 </html>

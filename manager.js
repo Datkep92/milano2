@@ -1,4 +1,4 @@
-// ========== DOM ELEMENTS ==========
+// ========== DOM ELEMENTS (dùng var có kiểm tra) ==========
 if(typeof periodLabel === 'undefined') var periodLabel = document.getElementById("periodLabel");
 if(typeof managerBank === 'undefined') var managerBank = document.getElementById("managerBank");
 if(typeof managerCash === 'undefined') var managerCash = document.getElementById("managerCash");
@@ -38,7 +38,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.classList.add("active");
     document.getElementById(btn.dataset.tab).classList.add("active");
     
-    // Ẩn/hiện FAB khi chuyển tab
     const expenseFab = document.getElementById("expenseFab");
     const debtFab = document.getElementById("debtFab");
     const paymentFab = document.getElementById("paymentFab");
@@ -197,6 +196,7 @@ function renderManagerDashboard(){
   let bank = 0, cash = 0;
   const bankDetails = [];
   const cashDetails = [];
+  const debtDetails = []; // THÊM MỚI: chi tiết công nợ phát sinh
   
   Object.entries(appData.reports).forEach(([date, report]) => {
     if(isDateInRange(date, range)){
@@ -210,18 +210,31 @@ function renderManagerDashboard(){
     }
   });
   
+  // THÊM MỚI: Tính chi tiết công nợ phát sinh trong kỳ
+  const debtTransactionsInRange = appData.debtTransactions
+    .filter(x => !x.deleted && x.type === "debt_add" && isDateInRange(x.date, range));
+  
+  const debtTotal = debtTransactionsInRange.reduce((a, b) => a + (b.amount || 0), 0);
+  
+  // Nhóm theo ngày để hiển thị chi tiết
+  const debtByDate = {};
+  debtTransactionsInRange.forEach(item => {
+    if(!debtByDate[item.date]) debtByDate[item.date] = 0;
+    debtByDate[item.date] += item.amount;
+  });
+  Object.entries(debtByDate).forEach(([date, amount]) => {
+    debtDetails.push({ date, amount });
+  });
+  debtDetails.sort((a,b) => b.date.localeCompare(a.date));
+  
   window.currentBankDetails = bankDetails.sort((a,b) => b.date.localeCompare(a.date));
   window.currentCashDetails = cashDetails.sort((a,b) => b.date.localeCompare(a.date));
+  window.currentDebtDetails = debtDetails;
   
   const expense = appData.expenses
     .filter(x => !x.deleted && isDateInRange(x.date, range))
     .reduce((a, b) => a + (b.amount || 0), 0);
   
-  const debt = appData.debtTransactions
-    .filter(x => !x.deleted && x.type === "debt_add" && isDateInRange(x.date, range))
-    .reduce((a, b) => a + (b.amount || 0), 0);
-  
-  // THÊM MỚI: Chi phí quản lý
   const adminExpense = appData.adminExpenses
     .filter(x => !x.deleted && isDateInRange(x.date, range))
     .reduce((a, b) => a + (b.amount || 0), 0);
@@ -229,18 +242,19 @@ function renderManagerDashboard(){
   managerBank.innerText = formatMoney(bank);
   managerCash.innerText = formatMoney(cash);
   managerExpense.innerText = formatMoney(expense);
-  managerDebt.innerText = formatMoney(debt);
+  managerDebt.innerText = formatMoney(debtTotal);
   if(managerAdminExpense) managerAdminExpense.innerText = formatMoney(adminExpense);
   
   renderExpenseStats(range);
   renderDebtStats(range);
-  renderAdminExpenseStats(range); // THÊM MỚI
+  renderAdminExpenseStats(range);
   
   setupClickableManagerBoxes();
-  setupScrollToAdminExpense(); // THÊM MỚI
+  setupScrollToElements();
 }
 
 function setupClickableManagerBoxes() {
+  // Ô Chuyển khoản
   const bankBox = document.querySelector('.manager-box:first-child');
   if (bankBox && !bankBox.hasAttribute('data-clickable')) {
     bankBox.setAttribute('data-clickable', 'true');
@@ -248,6 +262,7 @@ function setupClickableManagerBoxes() {
     bankBox.onclick = () => showTransactionDetail('bank', 'Chuyển khoản', window.currentBankDetails || []);
   }
   
+  // Ô Tiền mặt
   const cashBox = document.querySelector('.manager-box:nth-child(2)');
   if (cashBox && !cashBox.hasAttribute('data-clickable')) {
     cashBox.setAttribute('data-clickable', 'true');
@@ -255,25 +270,91 @@ function setupClickableManagerBoxes() {
     cashBox.onclick = () => showTransactionDetail('cash', 'Tiền mặt', window.currentCashDetails || []);
   }
   
-  // THÊM MỚI: Click vào ô Chi phí quản lý sẽ scroll xuống
+  // THÊM MỚI: Ô Công nợ phát sinh - Click hiển thị popup
+  const debtBox = document.querySelector('.manager-box:nth-child(4)');
+  if (debtBox && !debtBox.hasAttribute('data-clickable')) {
+    debtBox.setAttribute('data-clickable', 'true');
+    debtBox.style.cursor = 'pointer';
+    debtBox.onclick = () => showDebtInRangeDetail();
+  }
+  
+  // Ô Chi phí quản lý - Click scroll xuống
   const adminExpenseBox = document.getElementById('adminExpenseBox');
   if (adminExpenseBox && !adminExpenseBox.hasAttribute('data-clickable')) {
     adminExpenseBox.setAttribute('data-clickable', 'true');
     adminExpenseBox.style.cursor = 'pointer';
     adminExpenseBox.onclick = () => scrollToAdminExpenseList();
   }
+  
+  // THÊM MỚI: Ô Tổng công nợ hiện tại - Click scroll xuống danh sách công nợ
+  const totalDebtBox = document.querySelector('.manager-box:nth-child(5)');
+  if (totalDebtBox && !totalDebtBox.hasAttribute('data-clickable')) {
+    totalDebtBox.setAttribute('data-clickable', 'true');
+    totalDebtBox.style.cursor = 'pointer';
+    totalDebtBox.onclick = () => scrollToDebtList();
+  }
+  
+  // THÊM MỚI: Ô Chi phí - Click scroll xuống danh sách chi phí
+  const expenseBox = document.querySelector('.manager-box:nth-child(3)');
+  if (expenseBox && !expenseBox.hasAttribute('data-clickable')) {
+    expenseBox.setAttribute('data-clickable', 'true');
+    expenseBox.style.cursor = 'pointer';
+    expenseBox.onclick = () => scrollToExpenseList();
+  }
 }
 
-function setupScrollToAdminExpense() {
+function setupScrollToElements() {
+  // Gắn title cho các ô
+  const expenseBox = document.querySelector('.manager-box:nth-child(3)');
+  if (expenseBox) {
+    expenseBox.title = 'Click để xem danh sách chi phí';
+  }
+  
+  const totalDebtBox = document.querySelector('.manager-box:nth-child(5)');
+  if (totalDebtBox) {
+    totalDebtBox.title = 'Click để xem danh sách công nợ';
+  }
+  
   const adminExpenseBox = document.getElementById('adminExpenseBox');
   if (adminExpenseBox) {
-    adminExpenseBox.style.cursor = 'pointer';
     adminExpenseBox.title = 'Click để xem danh sách chi phí quản lý';
   }
 }
 
+// THÊM MỚI: Scroll đến danh sách chi phí
+function scrollToExpenseList() {
+  const expenseList = document.getElementById("managerExpenseList");
+  if (expenseList) {
+    expenseList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    expenseList.style.transition = 'background 0.5s';
+    expenseList.style.background = 'var(--accent-light)';
+    setTimeout(() => {
+      expenseList.style.background = '';
+    }, 1000);
+    showToast("📋 Đã cuộn đến danh sách chi phí");
+  } else {
+    showToast("⚠️ Chưa có dữ liệu chi phí");
+  }
+}
+
+// THÊM MỚI: Scroll đến danh sách công nợ
+function scrollToDebtList() {
+  const debtList = document.getElementById("managerDebtList");
+  if (debtList) {
+    debtList.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    debtList.style.transition = 'background 0.5s';
+    debtList.style.background = 'var(--danger-light)';
+    setTimeout(() => {
+      debtList.style.background = '';
+    }, 1000);
+    showToast("🧾 Đã cuộn đến danh sách công nợ");
+  } else {
+    showToast("⚠️ Chưa có dữ liệu công nợ");
+  }
+}
+
 function scrollToAdminExpenseList() {
-  const adminExpenseList = document.getElementById('managerAdminExpenseList');
+  const adminExpenseList = document.getElementById("managerAdminExpenseList");
   if (adminExpenseList) {
     adminExpenseList.scrollIntoView({ behavior: 'smooth', block: 'start' });
     adminExpenseList.style.transition = 'background 0.5s';
@@ -285,6 +366,42 @@ function scrollToAdminExpenseList() {
   } else {
     showToast("⚠️ Chưa có dữ liệu chi phí quản lý");
   }
+}
+
+// THÊM MỚI: Hiển thị popup chi tiết công nợ phát sinh trong kỳ
+function showDebtInRangeDetail() {
+  const details = window.currentDebtDetails || [];
+  if (!details || details.length === 0) {
+    showToast(`📭 Không có công nợ phát sinh trong kỳ này`);
+    return;
+  }
+  
+  const range = window.currentRange;
+  const periodText = range ? range.label : '';
+  const total = details.reduce((a,b) => a + b.amount, 0);
+  
+  detailTitle.innerText = `📊 Công Nợ Phát Sinh - ${periodText}`;
+  
+  let html = `
+    <div style="margin-bottom: 16px; padding: 12px; background: var(--bg-tertiary); border-radius: 12px; text-align: center;">
+      <div style="font-size: 12px; color: var(--text-light);">Tổng công nợ phát sinh</div>
+      <div style="font-size: 28px; font-weight: 700; color: var(--danger);">${formatMoney(total)}</div>
+    </div>
+    <div style="font-weight: 600; margin-bottom: 12px; font-size: 14px;">📋 Chi tiết theo ngày:</div>
+  `;
+  
+  details.forEach(item => {
+    const formattedDate = formatDisplayDate(item.date);
+    html += `
+      <div class="history-item" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="history-name">📅 ${formattedDate}</div>
+        <div class="history-amount" style="color: var(--danger); font-weight: 700;">+ ${formatMoney(item.amount)}</div>
+      </div>
+    `;
+  });
+  
+  detailContent.innerHTML = html;
+  openPopup("detailPopup");
 }
 
 function showTransactionDetail(type, title, details) {
@@ -339,10 +456,9 @@ function renderExpenseStats(range){
     </div>`;
   });
   if(html === "") html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí</div>';
-  managerExpenseList.innerHTML = html;
+  if(managerExpenseList) managerExpenseList.innerHTML = html;
 }
 
-// THÊM MỚI: Render chi phí quản lý
 function renderAdminExpenseStats(range){
   const grouped = {};
   appData.adminExpenses
@@ -364,28 +480,6 @@ function renderAdminExpenseStats(range){
   if(html === "") html = '<div class="empty-text">📭 Chưa có dữ liệu chi phí quản lý</div>';
   
   let container = document.getElementById("managerAdminExpenseList");
-  if(!container) {
-    const managerTab = document.getElementById("managerTab");
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.id = 'adminExpenseCard';
-    card.innerHTML = `
-      <div class="card-header">
-        <h2>📋 Chi Phí Quản Lý</h2>
-        <button class="small-btn" id="exportAdminExpenseBtn">Xuất</button>
-      </div>
-      <div id="managerAdminExpenseList"></div>
-    `;
-    const expenseCard = document.querySelector('#managerTab .card:nth-child(3)');
-    if(expenseCard) {
-      expenseCard.insertAdjacentElement('afterend', card);
-    } else {
-      managerTab.appendChild(card);
-    }
-    container = document.getElementById("managerAdminExpenseList");
-    
-    document.getElementById("exportAdminExpenseBtn")?.addEventListener('click', () => exportAdminExpenses());
-  }
   if(container) container.innerHTML = html;
 }
 
@@ -426,7 +520,7 @@ function renderDebtStats(range){
     }
   });
   if(html === "") html = '<div class="empty-text">✅ Không có khách nợ</div>';
-  managerDebtList.innerHTML = html;
+  if(managerDebtList) managerDebtList.innerHTML = html;
 }
 
 // ========== EXPORT ==========
@@ -451,22 +545,67 @@ if(exportExpenseBtn){
   };
 }
 
-if(exportDebtBtn){
+if (exportDebtBtn) {
+
   exportDebtBtn.onclick = () => {
+
     const range = getDateRange();
-    const debts = appData.debtTransactions.filter(x => !x.deleted && isDateInRange(x.date, range));
-    const data = debts.map(d => [d.date, d.customer, d.type === "debt_add" ? "Công nợ" : "Thanh toán", d.amount, d.note || ""]);
-    exportToCSV(data, `cong_no_${range.label.replace(/[\/\s→:]/g, "_")}.csv`, ["Ngày", "Khách hàng", "Loại", "Số tiền", "Ghi chú"]);
-    showToast("✓ Đã xuất file công nợ");
+
+    const debts = appData.debtTransactions.filter(item =>
+      !item.deleted &&
+      isDateInRange(item.date, range)
+    );
+
+    const data = debts.map(item => [
+
+      item.date,
+
+      item.customer || "Khách lẻ",
+
+      item.type === "debt_add"
+        ? "Công nợ"
+        : "Thanh toán",
+
+      Number(item.amount || 0),
+
+      item.note || ""
+
+    ]);
+
+    const fileName =
+      `cong_no_${(range.label || "data")
+        .replace(/[\/\s→:]/g, "_")}.csv`;
+
+    exportToCSV(
+      data,
+      fileName,
+      [
+        "Ngày",
+        "Khách hàng",
+        "Loại",
+        "Số tiền",
+        "Ghi chú"
+      ]
+    );
+
+    showToast(
+      `✓ Đã xuất ${debts.length} giao dịch công nợ`
+    );
+
   };
+
 }
 
-function exportAdminExpenses() {
-  const range = getDateRange();
-  const adminExpenses = appData.adminExpenses.filter(x => !x.deleted && isDateInRange(x.date, range));
-  const data = adminExpenses.map(e => [e.date, e.name, e.qty || 0, e.amount]);
-  exportToCSV(data, `chi_phi_quan_ly_${range.label.replace(/[\/\s→:]/g, "_")}.csv`, ["Ngày", "Tên", "Số lượng", "Số tiền"]);
-  showToast("✓ Đã xuất file chi phí quản lý");
+// Export Admin Expenses
+const exportAdminExpenseBtn = document.getElementById("exportAdminExpenseBtn");
+if(exportAdminExpenseBtn){
+  exportAdminExpenseBtn.onclick = () => {
+    const range = getDateRange();
+    const adminExpenses = appData.adminExpenses.filter(x => !x.deleted && isDateInRange(x.date, range));
+    const data = adminExpenses.map(e => [e.date, e.name, e.qty || 0, e.amount]);
+    exportToCSV(data, `chi_phi_quan_ly_${range.label.replace(/[\/\s→:]/g, "_")}.csv`, ["Ngày", "Tên", "Số lượng", "Số tiền"]);
+    showToast("✓ Đã xuất file chi phí quản lý");
+  };
 }
 
 function showExpenseDetail(name){
@@ -486,7 +625,6 @@ function showExpenseDetail(name){
   openPopup("detailPopup");
 }
 
-// THÊM MỚI: Hiển thị chi tiết chi phí quản lý
 function showAdminExpenseDetail(name){
   detailTitle.innerText = "🏢 Chi Phí Quản Lý: " + name;
   let html = "";
@@ -572,8 +710,12 @@ renderManagerDashboard = function() {
   updateManagerTotalDebt();
 };
 
-// Export
+// Export functions
 window.showAdminExpenseDetail = showAdminExpenseDetail;
 window.renderAdminExpenseStats = renderAdminExpenseStats;
+window.scrollToExpenseList = scrollToExpenseList;
+window.scrollToDebtList = scrollToDebtList;
+window.scrollToAdminExpenseList = scrollToAdminExpenseList;
+window.showDebtInRangeDetail = showDebtInRangeDetail;
 
 renderManagerDashboard();
