@@ -723,19 +723,28 @@ async function handleRealtimeRemoval(path) {
   }
 }
 
-// Helper: Refresh UI sau khi cập nhật dữ liệu
+// Helper: Refresh UI sau khi cập nhật dữ liệu (ĐÃ THÊM DOANH THU)
 function refreshUIAfterUpdate() {
-  if (typeof renderAllUI === 'function') {
-    renderAllUI();
-  } else {
-    // Fallback: gọi các hàm render riêng lẻ
-    if (typeof loadTodayData === 'function') loadTodayData();
-    if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
-    if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
-    if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
-    if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
-    if (typeof renderRecentAdminExpenses === 'function') renderRecentAdminExpenses();
-    if (typeof updateTotalDebtDisplay === 'function') updateTotalDebtDisplay();
+  // Cập nhật lại toàn bộ UI
+  if (typeof loadTodayData === 'function') loadTodayData();
+  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
+  if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
+  if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
+  if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
+  if (typeof renderRecentAdminExpenses === 'function') renderRecentAdminExpenses();
+  if (typeof updateTotalDebtDisplay === 'function') updateTotalDebtDisplay();
+  
+  // ========== THÊM MỚI: Cập nhật lại doanh thu trên UI ==========
+  const currentDate = getCurrentDate();
+  const revenueElement = document.getElementById("revenueTotal");
+  if (revenueElement && typeof calculateRevenueTotal === 'function') {
+    revenueElement.innerText = formatMoney(calculateRevenueTotal(currentDate));
+  }
+  
+  const managerRevenueElement = document.getElementById("managerRevenue");
+  if (managerRevenueElement && typeof calculateRevenueInRange === 'function' && window.currentRange) {
+    const revenue = calculateRevenueInRange(window.currentRange);
+    managerRevenueElement.innerText = formatMoney(revenue);
   }
 }
 

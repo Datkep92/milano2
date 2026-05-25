@@ -32,7 +32,37 @@ function showToast(message){
     toast.classList.remove("show");
   },1200);
 }
+// ========== THÊM MỚI: HÀM TÍNH DOANH THU ==========
 
+// Tính tổng doanh thu của một ngày (Tiền mặt + Chuyển khoản)
+function calculateRevenueTotal(date) {
+  if (!appData || !appData.reports) return 0;
+  const report = appData.reports[date];
+  if (!report) return 0;
+  
+  const cash = parseMoney(report.cash || 0);
+  const bank = parseMoney(report.bank || 0);
+  return cash + bank;
+}
+
+// Tính tổng doanh thu trong một khoảng thời gian (dùng cho Manager)
+function calculateRevenueInRange(range) {
+  let totalRevenue = 0;
+  if (!appData || !appData.reports) return 0;
+  
+  Object.entries(appData.reports).forEach(([date, report]) => {
+    if (isDateInRange(date, range)) {
+      const cash = parseMoney(report.cash || 0);
+      const bank = parseMoney(report.bank || 0);
+      totalRevenue += (cash + bank);
+    }
+  });
+  return totalRevenue;
+}
+
+// Export các hàm mới ra window
+window.calculateRevenueTotal = calculateRevenueTotal;
+window.calculateRevenueInRange = calculateRevenueInRange;
 function saveData(){
   localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
 }
@@ -153,7 +183,50 @@ function getReport(date){
   }
   return appData.reports[date];
 }
+// Tính tổng doanh thu trong kỳ (lấy từ reports.revenue)
+function calculateRevenueInRange(range) {
+  let total = 0;
+  Object.entries(appData.reports).forEach(([date, report]) => {
+    if (isDateInRange(date, range)) {
+      total += parseMoney(report.revenue || 0);
+    }
+  });
+  return total;
+}
 
+// Tính tổng Grab trong kỳ
+function calculateGrabInRange(range) {
+  let total = 0;
+  Object.entries(appData.reports).forEach(([date, report]) => {
+    if (isDateInRange(date, range)) {
+      total += parseMoney(report.grab || 0);
+    }
+  });
+  return total;
+}
+
+// Lấy chi tiết doanh thu theo ngày
+function getRevenueDetails(range) {
+  const details = [];
+  Object.entries(appData.reports).forEach(([date, report]) => {
+    if (isDateInRange(date, range) && (report.revenue || 0) > 0) {
+      details.push({ date, amount: parseMoney(report.revenue) });
+    }
+  });
+  return details.sort((a,b) => b.date.localeCompare(a.date));
+}
+
+// Lấy chi tiết Grab theo ngày
+function getGrabDetails(range) {
+  const details = [];
+  Object.entries(appData.reports).forEach(([date, report]) => {
+    if (isDateInRange(date, range) && (report.grab || 0) > 0) {
+      details.push({ date, amount: parseMoney(report.grab) });
+    }
+  });
+  return details.sort((a,b) => b.date.localeCompare(a.date));
+}
+// ========== ĐẢM BẢO CẤU TRÚC DỮ LIỆU (CÓ REVENUE & GRAB) ==========
 function ensureAppDataStructure() {
   if (!appData) {
     appData = {
@@ -165,18 +238,31 @@ function ensureAppDataStructure() {
       recent: { expenses: [], adminExpenses: [], customers: [] }
     };
   }
+  
+  // Đảm bảo các mảng chính
   if (!appData.reports) appData.reports = {};
   if (!appData.expenses) appData.expenses = [];
   if (!appData.adminExpenses) appData.adminExpenses = [];
   if (!appData.debtTransactions) appData.debtTransactions = [];
+  
+  // Đảm bảo categories
   if (!appData.categories) appData.categories = { expenses: [], adminExpenses: [], customers: [] };
   if (!appData.categories.expenses) appData.categories.expenses = [];
   if (!appData.categories.adminExpenses) appData.categories.adminExpenses = [];
   if (!appData.categories.customers) appData.categories.customers = [];
+  
+  // Đảm bảo recent
   if (!appData.recent) appData.recent = { expenses: [], adminExpenses: [], customers: [] };
   if (!appData.recent.expenses) appData.recent.expenses = [];
   if (!appData.recent.adminExpenses) appData.recent.adminExpenses = [];
   if (!appData.recent.customers) appData.recent.customers = [];
+  
+  // ========== THÊM MỚI: Đảm bảo mỗi report có revenue và grab ==========
+  Object.keys(appData.reports).forEach(date => {
+    const report = appData.reports[date];
+    if (report.revenue === undefined) report.revenue = 0;
+    if (report.grab === undefined) report.grab = 0;
+  });
 }
 
 ensureAppDataStructure();
@@ -424,7 +510,7 @@ function setupNumericKeyboard() {
     const selectors = [
         '#cashInput', '#bankInput', '#reserveInput',
         '#expenseAmount', '#debtAmount', '#adminExpenseAmount',
-        '#paymentAmount' // Thêm nếu có
+        '#paymentAmount', '#grabInput', '#revenueInput',
     ];
     
     selectors.forEach(selector => {
@@ -443,50 +529,72 @@ function setupNumericKeyboard() {
         }
     });
 }
+// ========== FORMAT TIỀN (KHÔNG NHÂN CHIA) ==========
+function formatMoney(value) {
+  if (value === undefined || value === null) return "0đ";
+  return Number(value).toLocaleString("vi-VN") + "đ";
+}
 
-// Gọi khi load trang
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupNumericKeyboard);
-} else {
-    setupNumericKeyboard();
+// Format số để hiển thị trong input (không có "đ")
+function formatNumberForInput(value) {
+  if (value === undefined || value === null) return "";
+  return Number(value).toLocaleString("vi-VN");
 }
-function setupAutoThousand() {
-    const moneyInputs = [
-        'cashInput', 'bankInput', 'reserveInput',
-        'expenseAmount', 'debtAmount', 'adminExpenseAmount',
-        'paymentAmount'
-    ];
+
+// Parse từ string về số (bỏ dấu phẩy)
+function parseMoney(value) {
+  if (!value) return 0;
+  return Number(String(value).replace(/[^0-9]/g, "")) || 0;
+}
+
+// Xóa bỏ setupAutoThousand cũ và thay bằng chỉ format khi blur/focus
+function setupMoneyInputs() {
+  const moneyInputs = [
+    'cashInput', 'bankInput', 'reserveInput',
+    'expenseAmount', 'debtAmount', 'adminExpenseAmount',
+    'paymentAmount', 'grabInput', 'revenueInput',
+  ];
+  
+  moneyInputs.forEach(id => {
+    const input = document.getElementById(id);
+    if (!input) return;
     
-    moneyInputs.forEach(id => {
-        const input = document.getElementById(id);
-        if (!input) return;
-        
-        input.addEventListener('blur', function() {
-            let rawValue = this.value.replace(/[^0-9]/g, '');
-            if (rawValue && !isNaN(rawValue) && rawValue.length > 0) {
-                // LUÔN nhân với 1000
-                let num = parseInt(rawValue) * 1000;
-                this.value = num.toLocaleString('vi-VN');
-            }
-        });
-        
-        input.addEventListener('focus', function() {
-            let num = parseMoney(this.value);
-            if (num && !isNaN(num)) {
-                // Chia lại cho 1000 khi focus
-                this.value = (num / 1000).toString();
-            }
-        });
-        
-        input.addEventListener('keypress', function(e) {
-            const char = String.fromCharCode(e.which);
-            if (!/[0-9]/.test(char)) {
-                e.preventDefault();
-            }
-        });
+    // Xóa hết event cũ bằng clone
+    const newInput = input.cloneNode(true);
+    input.parentNode.replaceChild(newInput, input);
+    
+    // Khi blur: format số
+    newInput.addEventListener('blur', function() {
+      let num = parseMoney(this.value);
+      if (num > 0) {
+        this.value = num.toLocaleString('vi-VN');
+      } else {
+        this.value = '';
+      }
     });
+    
+    // Khi focus: bỏ dấu phẩy để dễ nhập
+    newInput.addEventListener('focus', function() {
+      let num = parseMoney(this.value);
+      if (num > 0) {
+        this.value = num.toString();
+      } else {
+        this.value = '';
+      }
+    });
+    
+    // Chỉ cho nhập số
+    newInput.addEventListener('keypress', function(e) {
+      if (!/[0-9]/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+  });
 }
-setupAutoThousand();
+
+// Gọi sau khi DOM ready
+setupMoneyInputs();
+
 window.renderAllUI = renderAllUI;
 window.refreshUIData = refreshUIData;
 window.calculateTotalDebtAll = calculateTotalDebtAll;

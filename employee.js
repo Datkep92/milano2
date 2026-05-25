@@ -12,7 +12,8 @@ const debtFab = document.getElementById("debtFab");
 const paymentFab = document.getElementById("paymentFab");
 const prevDateBtn = document.getElementById("prevDateBtn");
 const nextDateBtn = document.getElementById("nextDateBtn");
-
+const revenueInput = document.getElementById("revenueInput");
+const grabInput = document.getElementById("grabInput");
 // Expense popup
 const expensePopup = document.getElementById("expensePopup");
 const expensePopupTitle = document.getElementById("expensePopupTitle");
@@ -20,7 +21,8 @@ const expenseQty = document.getElementById("expenseQty");
 const expenseAmount = document.getElementById("expenseAmount");
 const recentExpenseWrap = document.getElementById("recentExpenseWrap");
 const saveExpenseBtn = document.getElementById("saveExpenseBtn");
-
+// Thêm dòng này cùng với các const khác
+const submitDayBtn = document.getElementById("submitDayBtn");
 // Expense - thêm mới
 const addNewExpenseBtn = document.getElementById("addNewExpenseBtn");
 const newExpenseInput = document.getElementById("newExpenseInput");
@@ -63,8 +65,8 @@ let selectedCustomerName = "";
 // ========== KHỞI TẠO ==========
 reportDate.value = getToday();
 
-[bankInput, cashInput, reserveInput, expenseAmount, debtAmount, paymentAmount].forEach(formatInputMoney);
-
+// Chỉ giữ formatInputMoney cho các input trong popup (không dùng setupAutoThousand)
+[expenseAmount, debtAmount, paymentAmount].forEach(formatInputMoney);
 
 
 function renderRecentPayments() {
@@ -111,21 +113,7 @@ function selectPaymentCustomer(name) {
   paymentAmount.focus();
 }
 
-// ========== LOAD TODAY DATA ==========
-function loadTodayData() {
-  if (!appData) {
-    console.error("appData chưa sẵn sàng");
-    return;
-  }
-  const date = getCurrentDate();
-  const report = getReport(date);
-  if (bankInput) bankInput.value = (report.bank || 0).toLocaleString("vi-VN");
-  if (cashInput) cashInput.value = (report.cash || 0).toLocaleString("vi-VN");
-  if (reserveInput) reserveInput.value = (report.reserve || 0).toLocaleString("vi-VN");
-  if (expenseTotal) expenseTotal.innerText = formatMoney(calculateExpenseTotal(date));
-  if (debtTotal) debtTotal.innerText = formatMoney(calculateDebtTotal(date));
-  if (dayStatus) dayStatus.innerHTML = report.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
-}
+
 
 // ========== AUTO SAVE REPORT ==========
 function autoSaveReport() {
@@ -177,12 +165,43 @@ function autoSaveReport() {
   }
 }
 
+// ========== LOAD TODAY DATA (CHUẨN, KHÔNG NHÂN CHIA) ==========
+function loadTodayData() {
+  if (!appData) {
+    console.error("appData chưa sẵn sàng");
+    return;
+  }
+  const date = getCurrentDate();
+  const report = getReport(date);
+  
+  // Hiển thị số thật đã format (không nhân chia)
+  if (bankInput) bankInput.value = formatNumberForInput(report.bank || 0);
+  if (cashInput) cashInput.value = formatNumberForInput(report.cash || 0);
+  if (reserveInput) reserveInput.value = formatNumberForInput(report.reserve || 0);
+  if (revenueInput) revenueInput.value = formatNumberForInput(report.revenue || 0);
+  if (grabInput) grabInput.value = formatNumberForInput(report.grab || 0);
+  
+  // Các ô readonly
+  if (expenseTotal) expenseTotal.innerText = formatMoney(calculateExpenseTotal(date));
+  if (debtTotal) debtTotal.innerText = formatMoney(calculateDebtTotal(date));
+  
+  updateSubmitButtonStatus();
+  updateTotalDebtDisplay();
+  renderCustomerDebtList();
+  checkMissingReport();
+  addMissingReportButton();
+}
+
+// ========== SAVE REPORT (KHÔNG NHÂN CHIA) ==========
 function doSaveReport() {
   const date = getCurrentDate();
+  
   appData.reports[date] = {
-    bank: parseMoney(bankInput.value),
-    cash: parseMoney(cashInput.value),
-    reserve: parseMoney(reserveInput.value),
+    bank: parseMoney(bankInput?.value),
+    cash: parseMoney(cashInput?.value),
+    reserve: parseMoney(reserveInput?.value),
+    revenue: parseMoney(revenueInput?.value),
+    grab: parseMoney(grabInput?.value),
     status: getReport(date).status
   };
   saveData();
@@ -229,33 +248,25 @@ function checkMissingReport() {
   
   if (!report || report.status !== "completed") {
     if (!missingReportAlertShown) {
-      alert(`⚠️ CẢNH BÁO: Ngày ${formatDisplayDate(date)} chưa chốt báo cáo!\n\nVui lòng chốt ngày hôm qua trước khi nhập dữ liệu mới.`);
+      alert(`⚠️ CẢNH BÁO: Ngày ${formatDisplayDate(date)} chưa gửi báo cáo!\n\nVui lòng gửi ngày hôm qua trước khi nhập dữ liệu mới.`);
       missingReportAlertShown = true;
     }
     
-    showToast(`⚠️ Ngày ${formatDisplayDate(date)} chưa chốt! Vui lòng chốt trước khi nhập liệu`);
+    showToast(`⚠️ Ngày ${formatDisplayDate(date)} chưa gửi! Vui lòng gửi trước khi nhập liệu`);
     
-    const dayStatusEl = document.getElementById("dayStatus");
-    if (dayStatusEl) {
-      dayStatusEl.innerHTML = `🔴 NGÀY ${formatDisplayDate(date)} CHƯA CHỐT`;
-      dayStatusEl.style.background = "var(--danger-light)";
-      dayStatusEl.style.color = "var(--danger)";
-      dayStatusEl.style.fontWeight = "bold";
+    // Thay vì highlight dayStatus, highlight nút submit
+    if (submitDayBtn) {
+      submitDayBtn.style.animation = "blink 1s infinite";
+      setTimeout(() => {
+        if (submitDayBtn) submitDayBtn.style.animation = "";
+      }, 3000);
     }
     
     return false;
   }
   
   missingReportAlertShown = false;
-  const dayStatusEl = document.getElementById("dayStatus");
-  if (dayStatusEl && dayStatusEl.innerHTML.includes("CHƯA CHỐT")) {
-    const today = getToday();
-    const currentReport = getReport(today);
-    dayStatusEl.innerHTML = currentReport.status === "completed" ? "🟢 Đã chốt" : "🟡 Đang nhập";
-    dayStatusEl.style.background = "";
-    dayStatusEl.style.color = "";
-  }
-  
+  if (submitDayBtn) submitDayBtn.style.animation = "";
   return true;
 }
 
@@ -1007,66 +1018,7 @@ function updateTotalDebtDisplay() {
   }
 }
 
-// SỬA LẠI HÀM CHỐT NGÀY - GỬI TELEGRAM CHO MỌI NGÀY ĐƯỢC CHỐT
-completeDayBtn.onclick = async () => {
-  const date = getCurrentDate();  // Ngày đang chọn trên giao diện
-  const today = getToday();        // Ngày hôm nay
-  const report = getReport(date);
-  
-  // CHỈ KIỂM TRA khi chốt ngày HÔM NAY
-  if (date === today) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-    const yesterdayReport = getReport(yesterdayStr);
-    
-    if (yesterdayReport.status !== "completed") {
-      alert(`⚠️ KHÔNG THỂ CHỐT NGÀY HÔM NAY!\n\nNgày ${formatDisplayDate(yesterdayStr)} chưa được chốt.\n\nVui lòng chốt ngày ${formatDisplayDate(yesterdayStr)} trước.`);
-      showToast(`⚠️ Vui lòng chốt ngày ${formatDisplayDate(yesterdayStr)} trước!`);
-      
-      if (reportDate) {
-        reportDate.value = yesterdayStr;
-        loadTodayData();
-      }
-      return;
-    }
-  }
-  
-  // Chốt ngày
-  report.status = "completed";
-  saveData();
-  loadTodayData();
-  showToast(`✓ Đã chốt ngày ${formatDisplayDate(date)}`);
-  
-  // Xóa nút cảnh báo nếu có
-  const missingBtn = document.getElementById("missingReportBtn");
-  if (missingBtn) missingBtn.remove();
-  
-  // ========== GỬI BÁO CÁO TELEGRAM CHO MỌI NGÀY ==========
-  const expenseTotalVal = calculateExpenseTotal(date);
-  const debtTotalVal = calculateDebtTotal(date);
-  const expenses = appData.expenses.filter(x => x.date === date && !x.deleted);
-  const debts = appData.debtTransactions.filter(x => x.date === date && x.type === "debt_add" && !x.deleted);
-  const allDebtTransactions = appData.debtTransactions.filter(x => !x.deleted);
-  
-  if (typeof sendFullReport === 'function') {
-    const sent = await sendFullReport(date, report, expenses, debts, allDebtTransactions);
-    if (sent) {
-      showToast(`✓ Đã gửi báo cáo Telegram ngày ${formatDisplayDate(date)}`);
-    } else {
-      showToast(`⚠️ Gửi báo cáo Telegram thất bại`);
-    }
-  } else if (typeof sendQuickReport === 'function') {
-    await sendQuickReport(date, report, expenseTotalVal, debtTotalVal);
-    showToast(`✓ Đã gửi báo cáo Telegram ngày ${formatDisplayDate(date)}`);
-  }
-  
-  console.log(`✅ Đã chốt ngày ${date} và gửi báo cáo Telegram`);
-};
 
-console.log("✅ Đã sửa - Gửi Telegram khi chốt BẤT KỲ ngày nào");
-
-console.log("✅ Đã sửa hàm chốt ngày - Chỉ chặn khi chốt ngày hôm nay");
 
 // ========== CẬP NHẬT LOAD TODAY DATA ==========
 const originalLoadTodayData = loadTodayData;
@@ -1230,7 +1182,13 @@ function renderRecentCustomers() {
   });
   recentCustomerWrap.innerHTML = html;
 }
-
+// ========== EVENT LISTENER CHO REVENUE VÀ GRAB ==========
+if (revenueInput) {
+  revenueInput.addEventListener("input", autoSaveReport);
+}
+if (grabInput) {
+  grabInput.addEventListener("input", autoSaveReport);
+}
 // Hàm chọn khách hàng từ recent
 window.setCustomerName = function(name) {
   if (debtCustomerInput) debtCustomerInput.value = name;
@@ -1358,6 +1316,25 @@ debtFab.onclick = () => {
     if (debtCustomerInput) debtCustomerInput.focus();
   }, 100);
 };
+// ========== NÚT GỬI / ĐÃ GỬI ==========
+function updateSubmitButtonStatus() {
+  const date = getCurrentDate();
+  const report = getReport(date);
+  const isCompleted = report.status === "completed";
+  
+  if (submitDayBtn) {
+    if (isCompleted) {
+      submitDayBtn.innerHTML = "✅ Đã gửi";
+      submitDayBtn.classList.add("submitted");
+      submitDayBtn.disabled = true;
+    } else {
+      submitDayBtn.innerHTML = "📤 Gửi báo cáo";
+      submitDayBtn.classList.remove("submitted");
+      submitDayBtn.disabled = false;
+    }
+  }
+}
+
 
 // ========== XỬ LÝ NÚT SỐ TIỀN NHANH ==========
 function setupQuickMoneyButtons() {
