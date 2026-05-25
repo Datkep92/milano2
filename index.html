@@ -206,7 +206,7 @@
 <div class="popup hidden" id="expensePopup">
   <div class="popup-content">
     <div class="popup-header">
-      <h2 id="expensePopupTitle">➕ Thêm Chi Phí</h2>
+      <h2 id="expensePopupTitle">Thêm Chi Phí</h2>
       <button class="close-btn" data-close="expensePopup">✕</button>
     </div>
     
@@ -330,15 +330,12 @@
     </div>
     
     <!-- Ô NHẬP TÊN CHI PHÍ (TỰ ĐỘNG THÊM MỚI) -->
-    <div class="quick-title">📝 Tên chi phí quản lý</div>
-    <input type="text" id="adminExpenseNameInput" placeholder="Nhập tên chi phí..." autocomplete="off" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+    <input type="text" id="adminExpenseNameInput" placeholder="📝 Nhập tên chi phí..." autocomplete="off" style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
     
     <!-- DANH SÁCH GỢI Ý NHANH (THƯỜNG DÙNG) -->
-    <div class="quick-title">⚡ Thường dùng</div>
     <div class="recent-wrap" id="recentAdminExpenseWrap" style="margin-bottom: 16px;"></div>
     
     <!-- SỐ TIỀN NHANH -->
-    <div class="quick-title">⚡ Chọn nhanh số tiền</div>
     <div class="quick-money" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
       <button type="button" class="quick-admin-money-btn" data-amount="35000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">35k</button>
       <button type="button" class="quick-admin-money-btn" data-amount="50000" style="flex: 1; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">50k</button>
@@ -347,12 +344,10 @@
     </div>
     
     <!-- SỐ LƯỢNG -->
-    <div class="quick-title">📦 Số lượng (tùy chọn)</div>
-    <input type="text" id="adminExpenseQty" placeholder="Số lượng..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
+    <input type="text" id="adminExpenseQty" placeholder="📦Số lượng..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 12px;">
     
     <!-- SỐ TIỀN -->
-    <div class="quick-title">💰 Số tiền</div>
-    <input type="text" id="adminExpenseAmount" placeholder="Nhập số tiền..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px;">
+    <input type="text" id="adminExpenseAmount" placeholder="💰Nhập số tiền..." style="width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px;">
     
     <!-- NÚT LƯU -->
     <button class="primary-btn" id="saveAdminExpenseBtn" style="width: 100%; padding: 12px;">💾 Lưu chi phí quản lý</button>
