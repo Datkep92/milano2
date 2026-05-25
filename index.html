@@ -106,27 +106,35 @@
   <!-- ========== MANAGER TAB ========== -->
   <div class="tab-content" id="managerTab">
 
-    <!-- Bộ lọc -->
-    <div class="card">
-      <div class="filter-header">
-        <div class="view-mode-group">
-          <button class="view-mode-btn active" data-mode="period">📅 Kỳ</button>
-          <button class="view-mode-btn" data-mode="month">📆 Tháng</button>
-          <button class="view-mode-btn" data-mode="day">📌 Ngày</button>
-        </div>
-      </div>
-      <div class="date-nav">
-        <button id="periodPrevBtn" class="nav-btn">◀ Trước</button>
-        <div class="period-display" id="periodDisplay">Đang tải...</div>
-        <button id="periodNextBtn" class="nav-btn">Sau ▶</button>
-      </div>
-      <div class="date-picker-wrapper hidden" id="datePickerWrapper">
-        <input type="date" id="managerDatePicker">
-      </div>
-      <div class="month-picker-wrapper hidden" id="monthPickerWrapper">
-        <input type="month" id="managerMonthPicker">
-      </div>
-    </div>
+    <div class="nav-group full-width">
+
+  <button id="periodPrevBtn" class="nav-btn">
+    ◀
+  </button>
+
+  <select id="viewModeSelect" class="mode-select">
+  <option value="period"></option>
+  <option value="month"></option>
+  <option value="day"></option>
+</select>
+
+  <div id="periodDisplay" class="period-display">
+    Đang tải...
+  </div>
+
+  <button id="periodNextBtn" class="nav-btn">
+    ▶
+  </button>
+
+</div>
+
+<div id="datePickerWrapper" class="hidden">
+  <input type="date" id="managerDatePicker">
+</div>
+
+<div id="monthPickerWrapper" class="hidden">
+  <input type="month" id="managerMonthPicker">
+</div>
 
     <!-- Thống kê -->
     <div class="card">

@@ -54,89 +54,232 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 });
 
 // ========== VIEW MODE ==========
-viewModeBtns.forEach(btn => {
-  btn.onclick = () => {
-    viewModeBtns.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    currentViewMode = btn.dataset.mode;
-    datePickerWrapper.classList.add("hidden");
-    monthPickerWrapper.classList.add("hidden");
-    if(currentViewMode === "day"){
-      datePickerWrapper.classList.remove("hidden");
-      managerDatePicker.value = currentDay;
-      renderManagerDashboard();
-    }else if(currentViewMode === "month"){
-      monthPickerWrapper.classList.remove("hidden");
-      managerMonthPicker.value = currentMonth;
-      renderManagerDashboard();
-    }else{
-      renderManagerDashboard();
+const viewModeSelect = document.getElementById("viewModeSelect");
+
+if(viewModeSelect){
+
+  viewModeSelect.value = currentViewMode;
+
+  viewModeSelect.onchange = () => {
+
+    currentViewMode = viewModeSelect.value;
+
+    if(datePickerWrapper){
+      datePickerWrapper.classList.add("hidden");
     }
+
+    if(monthPickerWrapper){
+      monthPickerWrapper.classList.add("hidden");
+    }
+
+    if(currentViewMode === "day"){
+
+      if(datePickerWrapper){
+        datePickerWrapper.classList.remove("hidden");
+      }
+
+      if(managerDatePicker){
+        managerDatePicker.value = currentDay;
+      }
+
+    }else if(currentViewMode === "month"){
+
+      if(monthPickerWrapper){
+        monthPickerWrapper.classList.remove("hidden");
+      }
+
+      if(managerMonthPicker){
+        managerMonthPicker.value = currentMonth;
+      }
+
+    }
+
+    renderManagerDashboard();
   };
-});
+}
+
 
 // ========== NAVIGATION ==========
-if(periodPrevBtn) {
+if(periodPrevBtn){
+
   periodPrevBtn.onclick = () => {
+
     if(currentViewMode === "period"){
+
       const newDate = new Date(currentPeriodDate);
-      newDate.setMonth(newDate.getMonth() - 1);
+
+      newDate.setMonth(
+        newDate.getMonth() - 1
+      );
+
       currentPeriodDate = newDate;
-      renderManagerDashboard();
-    }else if(currentViewMode === "month"){
-      const [year, month] = currentMonth.split("-").map(Number);
-      let newYear = year, newMonth = month - 1;
-      if(newMonth < 1){ newMonth = 12; newYear = year - 1; }
-      currentMonth = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-      if(managerMonthPicker) managerMonthPicker.value = currentMonth;
-      renderManagerDashboard();
-    }else if(currentViewMode === "day"){
-      const newDate = new Date(currentDay);
-      newDate.setDate(newDate.getDate() - 1);
-      currentDay = newDate.toISOString().split("T")[0];
-      if(managerDatePicker) managerDatePicker.value = currentDay;
-      renderManagerDashboard();
+
     }
+    else if(currentViewMode === "month"){
+
+      const [year, month] =
+        currentMonth.split("-").map(Number);
+
+      let newYear = year;
+      let newMonth = month - 1;
+
+      if(newMonth < 1){
+        newMonth = 12;
+        newYear--;
+      }
+
+      currentMonth =
+        `${newYear}-${String(newMonth).padStart(2,"0")}`;
+
+      if(managerMonthPicker){
+        managerMonthPicker.value = currentMonth;
+      }
+
+    }
+    else if(currentViewMode === "day"){
+
+      const newDate = new Date(currentDay);
+
+      newDate.setDate(
+        newDate.getDate() - 1
+      );
+
+      currentDay =
+        newDate.toISOString().split("T")[0];
+
+      if(managerDatePicker){
+        managerDatePicker.value = currentDay;
+      }
+
+    }
+
+    renderManagerDashboard();
   };
 }
 
-if(periodNextBtn) {
+
+if(periodNextBtn){
+
   periodNextBtn.onclick = () => {
+
     if(currentViewMode === "period"){
+
       const newDate = new Date(currentPeriodDate);
-      newDate.setMonth(newDate.getMonth() + 1);
+
+      newDate.setMonth(
+        newDate.getMonth() + 1
+      );
+
       currentPeriodDate = newDate;
-      renderManagerDashboard();
-    }else if(currentViewMode === "month"){
-      const [year, month] = currentMonth.split("-").map(Number);
-      let newYear = year, newMonth = month + 1;
-      if(newMonth > 12){ newMonth = 1; newYear = year + 1; }
-      currentMonth = `${newYear}-${String(newMonth).padStart(2, '0')}`;
-      if(managerMonthPicker) managerMonthPicker.value = currentMonth;
-      renderManagerDashboard();
-    }else if(currentViewMode === "day"){
-      const newDate = new Date(currentDay);
-      newDate.setDate(newDate.getDate() + 1);
-      currentDay = newDate.toISOString().split("T")[0];
-      if(managerDatePicker) managerDatePicker.value = currentDay;
-      renderManagerDashboard();
+
     }
+    else if(currentViewMode === "month"){
+
+      const [year, month] =
+        currentMonth.split("-").map(Number);
+
+      let newYear = year;
+      let newMonth = month + 1;
+
+      if(newMonth > 12){
+        newMonth = 1;
+        newYear++;
+      }
+
+      currentMonth =
+        `${newYear}-${String(newMonth).padStart(2,"0")}`;
+
+      if(managerMonthPicker){
+        managerMonthPicker.value = currentMonth;
+      }
+
+    }
+    else if(currentViewMode === "day"){
+
+      const newDate = new Date(currentDay);
+
+      newDate.setDate(
+        newDate.getDate() + 1
+      );
+
+      currentDay =
+        newDate.toISOString().split("T")[0];
+
+      if(managerDatePicker){
+        managerDatePicker.value = currentDay;
+      }
+
+    }
+
+    renderManagerDashboard();
   };
 }
 
+
+// ========== DATE PICKER ==========
 if(managerDatePicker){
+
   managerDatePicker.onchange = () => {
+
     currentDay = managerDatePicker.value;
-    renderManagerDashboard();
-  };
-}
-if(managerMonthPicker){
-  managerMonthPicker.onchange = () => {
-    currentMonth = managerMonthPicker.value;
+
     renderManagerDashboard();
   };
 }
 
+
+// ========== MONTH PICKER ==========
+if(managerMonthPicker){
+
+  managerMonthPicker.onchange = () => {
+
+    currentMonth = managerMonthPicker.value;
+
+    renderManagerDashboard();
+  };
+}
+function updateViewModeLabels() {
+
+  const select = document.getElementById("viewModeSelect");
+  if (!select) return;
+
+  const periodOption = select.querySelector('option[value="period"]');
+  const monthOption = select.querySelector('option[value="month"]');
+  const dayOption = select.querySelector('option[value="day"]');
+
+  const range = getDateRange();
+
+  // Kỳ
+  if (range && range.type === "period") {
+    periodOption.textContent = range.label;
+  } else {
+    const d = new Date(currentPeriodDate);
+
+    let start, end;
+
+    if (d.getDate() >= 20) {
+      start = new Date(d.getFullYear(), d.getMonth(), 20);
+      end = new Date(d.getFullYear(), d.getMonth() + 1, 19);
+    } else {
+      start = new Date(d.getFullYear(), d.getMonth() - 1, 20);
+      end = new Date(d.getFullYear(), d.getMonth(), 19);
+    }
+
+    periodOption.textContent =
+      `${start.toLocaleDateString("vi-VN")} → ${end.toLocaleDateString("vi-VN")}`;
+  }
+
+  // Tháng
+  const [year, month] = currentMonth.split("-");
+
+  monthOption.textContent =
+    `Tháng ${month}/${year}`;
+
+  // Ngày
+  dayOption.textContent =
+    new Date(currentDay).toLocaleDateString("vi-VN");
+}
+updateViewModeLabels();
 // ========== GET DATE RANGE ==========
 function getDateRange(){
   if(currentViewMode === "day"){

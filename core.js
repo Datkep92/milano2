@@ -411,7 +411,7 @@ function initDefaultData() {
       adminExpenses: [],
       debtTransactions: [],
       categories: { expenses: [], adminExpenses: [], customers: [] },
-      recent: { expenses: [], adminExpenses: [], customers: [] }
+      recent: { expenses: [], adminExpenses: [], customers: [], adminExpenseQty: [] }
     };
     saveData();
   }
@@ -450,6 +450,43 @@ if (document.readyState === 'loading') {
 } else {
     setupNumericKeyboard();
 }
+function setupAutoThousand() {
+    const moneyInputs = [
+        'cashInput', 'bankInput', 'reserveInput',
+        'expenseAmount', 'debtAmount', 'adminExpenseAmount',
+        'paymentAmount'
+    ];
+    
+    moneyInputs.forEach(id => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        
+        input.addEventListener('blur', function() {
+            let rawValue = this.value.replace(/[^0-9]/g, '');
+            if (rawValue && !isNaN(rawValue) && rawValue.length > 0) {
+                // LUÔN nhân với 1000
+                let num = parseInt(rawValue) * 1000;
+                this.value = num.toLocaleString('vi-VN');
+            }
+        });
+        
+        input.addEventListener('focus', function() {
+            let num = parseMoney(this.value);
+            if (num && !isNaN(num)) {
+                // Chia lại cho 1000 khi focus
+                this.value = (num / 1000).toString();
+            }
+        });
+        
+        input.addEventListener('keypress', function(e) {
+            const char = String.fromCharCode(e.which);
+            if (!/[0-9]/.test(char)) {
+                e.preventDefault();
+            }
+        });
+    });
+}
+setupAutoThousand();
 window.renderAllUI = renderAllUI;
 window.refreshUIData = refreshUIData;
 window.calculateTotalDebtAll = calculateTotalDebtAll;
