@@ -1757,3 +1757,7 @@ textarea {
 .admin-expense-btn:active {
   transform: translateY(0);
 }
+
+.fab-group{
+  display:none !important;
+}

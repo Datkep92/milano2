@@ -419,7 +419,37 @@ function initDefaultData() {
 }
 
 initDefaultData();
+// Kích hoạt bàn phím số cho tất cả input tiền
+function setupNumericKeyboard() {
+    const selectors = [
+        '#cashInput', '#bankInput', '#reserveInput',
+        '#expenseAmount', '#debtAmount', '#adminExpenseAmount',
+        '#paymentAmount' // Thêm nếu có
+    ];
+    
+    selectors.forEach(selector => {
+        const input = document.querySelector(selector);
+        if (input) {
+            input.setAttribute('inputmode', 'numeric');
+            input.setAttribute('pattern', '[0-9]*');
+            
+            // Ngăn nhập chữ (tùy chọn)
+            input.addEventListener('keypress', function(e) {
+                const char = String.fromCharCode(e.which);
+                if (!/[0-9]/.test(char)) {
+                    e.preventDefault();
+                }
+            });
+        }
+    });
+}
 
+// Gọi khi load trang
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupNumericKeyboard);
+} else {
+    setupNumericKeyboard();
+}
 window.renderAllUI = renderAllUI;
 window.refreshUIData = refreshUIData;
 window.calculateTotalDebtAll = calculateTotalDebtAll;
