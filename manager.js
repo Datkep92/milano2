@@ -970,13 +970,10 @@ function updateManagerTotalDebt() {
   }
 }
 
-// Ghi đè renderManagerDashboard để thêm updateManagerTotalDebt và collapsible
 const originalRenderManagerDashboard = renderManagerDashboard;
 renderManagerDashboard = function() {
   originalRenderManagerDashboard();
   updateManagerTotalDebt();
-  // Đảm bảo collapsible vẫn hoạt động sau khi render lại
-  setTimeout(setupCollapsibleCards, 50);
 };
 
 // Export functions
@@ -993,70 +990,48 @@ renderManagerDashboard();
 function setupCollapsibleCards() {
   const cards = document.querySelectorAll('.collapsible');
   
-  if (cards.length === 0) {
-    console.log("Không tìm thấy card collapsible nào");
-    return;
-  }
-  
-  // Đặt trạng thái ban đầu: tất cả đều đóng
-  cards.forEach(card => {
-    card.classList.add('collapsed');
+  // Đặt trạng thái ban đầu: tất cả đều đóng, hoặc mở card đầu tiên
+  cards.forEach((card, index) => {
+    if (index === 0) {
+      // Mở card đầu tiên
+      card.classList.remove('collapsed');
+    } else {
+      // Các card còn lại đóng
+      card.classList.add('collapsed');
+    }
   });
-  
-  // Mở card đầu tiên (Chi phí nhân viên)
-  if (cards[0]) {
-    cards[0].classList.remove('collapsed');
-  }
   
   cards.forEach(card => {
     const header = card.querySelector('.toggle-header');
-    if (!header) {
-      console.warn("Không tìm thấy .toggle-header trong card", card);
-      return;
-    }
+    if (!header) return;
     
     header.style.cursor = 'pointer';
     
-    // Xóa event cũ
-    const oldHandler = header._clickHandler;
-    if (oldHandler) {
-      header.removeEventListener('click', oldHandler);
-    }
+    // Xóa event cũ để tránh trùng lặp
+    header.removeEventListener('click', header._clickHandler);
     
     // Tạo handler mới
     const clickHandler = (e) => {
-      // Không xử lý nếu click vào button
-      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-        return;
-      }
+      // Không xử lý nếu click vào button bên trong header
+      if (e.target.tagName === 'BUTTON') return;
       
       const isCurrentlyCollapsed = card.classList.contains('collapsed');
       
-      // Đóng tất cả các card
-      cards.forEach(c => c.classList.add('collapsed'));
-      
-      // Nếu card đang đóng thì mở nó ra
       if (isCurrentlyCollapsed) {
+        // Đóng tất cả các card
+        cards.forEach(c => c.classList.add('collapsed'));
+        // Mở card hiện tại
         card.classList.remove('collapsed');
+      } else {
+        // Nếu đang mở thì đóng lại
+        card.classList.add('collapsed');
       }
-      // Nếu card đang mở thì giữ nguyên (tất cả đều đóng)
     };
     
+    // Lưu handler để có thể remove sau
     header._clickHandler = clickHandler;
     header.addEventListener('click', clickHandler);
   });
-  
-  console.log("✅ Đã khởi tạo collapsible cards, số lượng:", cards.length);
-}
-
-// Gọi hàm khi DOM đã sẵn sàng
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    setupCollapsibleCards();
-  });
-} else {
-  // DOM đã sẵn sàng, gọi ngay
-  setTimeout(setupCollapsibleCards, 100);
 }
 
 // Gọi hàm sau khi DOM load
@@ -1067,4 +1042,3 @@ if (document.readyState === 'loading') {
 }
 
 setupCollapsibleCards();
-
