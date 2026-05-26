@@ -1,21 +1,31 @@
 const STORAGE_KEY = "cafe_manager_full_v1";
 
-let appData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
-  reports:{},
-  expenses:[],        // Chi phí nhân viên
-  adminExpenses:[],   // THÊM MỚI: Chi phí quản lý
-  debtTransactions:[],
-  categories:{
-    expenses:[],      // Danh mục chi phí nhân viên
-    adminExpenses:[], // THÊM MỚI: Danh mục chi phí quản lý
-    customers:[]
+// Khởi tạo dữ liệu mặc định
+const defaultData = {
+  reports: {},
+  expenses: [],
+  adminExpenses: [],
+  debtTransactions: [],
+  categories: {
+    expenses: [],
+    adminExpenses: [],
+    customers: []
   },
-  recent:{
-    expenses:[],      // Recent chi phí nhân viên
-    adminExpenses:[], // THÊM MỚI: Recent chi phí quản lý
-    customers:[]
+  recent: {
+    expenses: [],
+    adminExpenses: [],
+    customers: []
   }
 };
+
+// Tạo biến toàn cục DUY NHẤT trên window
+window.AppData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultData;
+
+// Tạo alias appData để code cũ vẫn chạy (tham chiếu đến cùng object)
+var appData = window.AppData;
+
+// Đảm bảo window.appData cũng trỏ đến cùng object (để firebase-sync dùng)
+window.appData = window.AppData;
 
 let editingExpenseId = null;
 let editingDebtId = null;

@@ -451,6 +451,7 @@ async function loadFromFirebase(retryCount = 0) {
   }
 }
 
+// ========== REALTIME LISTENER - LẮNG NGHE CHILD_CHANGED (CHỈ CẬP NHẬT NGÀY BỊ ẢNH HƯỞNG) ==========
 function setupRealtimeListener() {
   const user = firebase.auth().currentUser;
   if (!user) return;
