@@ -2162,3 +2162,13 @@ textarea {
 .toggle-header .admin-expense-btn {
   margin: 0;
 }
+
+.primary-btn.submitted {
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  position: relative;
+  top: -12px;
+}
+
+

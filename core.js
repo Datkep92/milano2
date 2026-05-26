@@ -369,15 +369,19 @@ function isInPeriod(date,period){
   return d >= period.start && d <= period.end;
 }
 
-function isEditable(date){
+// ========== KIỂM TRA CÓ ĐƯỢC SỬA NGÀY NÀY KHÔNG ==========
+function isEditable(date) {
   const today = getToday();
-  if(date === today) return true;
-  const report = getReport(date);
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
   
-  if (report.status === "completed") {
-    return window.isAdminSync ? window.isAdminSync() : false;
-  }
-  return true;
+  // Admin: toàn quyền trên mọi ngày
+  if (isAdmin) return true;
+  
+  // Nhân viên: chỉ được sửa ngày hôm nay
+  if (date === today) return true;
+  
+  // Nhân viên: không được sửa ngày cũ (kể cả draft hay completed)
+  return false;
 }
 
 function isAddable(date){

@@ -113,13 +113,31 @@ function selectPaymentCustomer(name) {
   paymentAmount.focus();
 }
 
-
-
-// ========== AUTO SAVE REPORT ==========
+// ========== AUTO SAVE REPORT (HOÀN CHỈNH - CÓ CHẶN NGÀY TƯƠNG LAI) ==========
 function autoSaveReport() {
   const date = getCurrentDate();
   const today = getToday();
-
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+  
+  // ========== CHẶN NGÀY TƯƠNG LAI ==========
+  if (date > today) {
+    const report = getReport(date);
+    if (bankInput) bankInput.value = (report.bank || 0).toLocaleString("vi-VN");
+    if (cashInput) cashInput.value = (report.cash || 0).toLocaleString("vi-VN");
+    if (reserveInput) reserveInput.value = (report.reserve || 0).toLocaleString("vi-VN");
+    if (revenueInput) revenueInput.value = (report.revenue || 0).toLocaleString("vi-VN");
+    if (grabInput) grabInput.value = (report.grab || 0).toLocaleString("vi-VN");
+    alert(`⚠️ KHÔNG THỂ NHẬP DỮ LIỆU CHO NGÀY TƯƠNG LAI!\n\nNgày ${formatDisplayDate(date)} chưa xảy ra.`);
+    showToast(`⚠️ Không thể nhập ngày tương lai`);
+    return;
+  }
+  
+  // Admin: luôn cho phép lưu
+  if (isAdmin) {
+    doSaveReport();
+    return;
+  }
+  
   // KIỂM TRA NGÀY HÔM QUA ĐÃ CHỐT CHƯA (chỉ áp dụng cho ngày hôm nay)
   if (date === today) {
     if (!isYesterdayCompleted()) {
@@ -132,11 +150,12 @@ function autoSaveReport() {
       if (bankInput) bankInput.value = (report.bank || 0).toLocaleString("vi-VN");
       if (cashInput) cashInput.value = (report.cash || 0).toLocaleString("vi-VN");
       if (reserveInput) reserveInput.value = (report.reserve || 0).toLocaleString("vi-VN");
+      if (revenueInput) revenueInput.value = (report.revenue || 0).toLocaleString("vi-VN");
+      if (grabInput) grabInput.value = (report.grab || 0).toLocaleString("vi-VN");
       
-      alert(`⚠️ KHÔNG THỂ NHẬP SỐ LIỆU!\n\nNgày ${formatDisplayDate(yesterdayStr)} chưa được chốt báo cáo.\n\nVui lòng chốt ngày hôm qua trước khi nhập số liệu mới.`);
-      showToast(`⚠️ Ngày ${formatDisplayDate(yesterdayStr)} chưa chốt! Không thể nhập số liệu`);
+      alert(`⚠️ KHÔNG THỂ NHẬP SỐ LIỆU!\n\nNgày ${formatDisplayDate(yesterdayStr)} chưa được gửi báo cáo.\n\nVui lòng gửi ngày hôm qua trước khi nhập số liệu mới.`);
+      showToast(`⚠️ Ngày ${formatDisplayDate(yesterdayStr)} chưa gửi! Không thể nhập số liệu`);
       
-      // Chuyển đến ngày hôm qua
       if (reportDate) {
         reportDate.value = yesterdayStr;
         loadTodayData();
@@ -155,10 +174,10 @@ function autoSaveReport() {
   if (report.status === "completed") {
     if (window.isAdminSync && window.isAdminSync()) {
       doSaveReport();
-      showToast("⚡ Bạn đang sửa ngày đã chốt (Quyền Quản lý)");
+      showToast("⚡ Bạn đang sửa ngày đã gửi (Quyền Quản lý)");
     } else {
       loadTodayData();
-      showToast("⚠️ Ngày đã chốt, chỉ Quản lý mới được sửa!");
+      showToast("⚠️ Ngày đã gửi, chỉ Quản lý mới được sửa!");
     }
   } else {
     doSaveReport();
@@ -192,9 +211,16 @@ function loadTodayData() {
   addMissingReportButton();
 }
 
-// ========== SAVE REPORT (KHÔNG NHÂN CHIA) ==========
+// ========== SAVE REPORT (HOÀN CHỈNH - CÓ CHẶN NGÀY TƯƠNG LAI) ==========
 function doSaveReport() {
   const date = getCurrentDate();
+  const today = getToday();
+  
+  // ========== CHẶN NGÀY TƯƠNG LAI ==========
+  if (date > today) {
+    console.warn("Không thể lưu báo cáo cho ngày tương lai");
+    return;
+  }
   
   appData.reports[date] = {
     bank: parseMoney(bankInput?.value),
@@ -347,13 +373,23 @@ function updatePaymentInfo() {
   }
 }
 
-// ========== SAVE PAYMENT ==========
+// ========== SAVE PAYMENT (HOÀN CHỈNH - CÓ CHẶN NGÀY TƯƠNG LAI) ==========
 savePaymentBtn.onclick = () => {
-  // KIỂM TRA NGÀY HÔM QUA ĐÃ CHỐT CHƯA
-  if (!canAddData()) return;
-  
   const date = getCurrentDate();
   const today = getToday();
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+  
+  // ========== CHẶN NGÀY TƯƠNG LAI ==========
+  if (date > today) {
+    alert(`⚠️ KHÔNG THỂ THANH TOÁN CHO NGÀY TƯƠNG LAI!\n\nNgày ${formatDisplayDate(date)} chưa xảy ra.`);
+    return;
+  }
+  
+  // KIỂM TRA NGÀY HÔM QUA ĐÃ CHỐT CHƯA
+  if (!isAdmin && date === today) {
+    if (!canAddData()) return;
+  }
+  
   const customer = paymentCustomer ? paymentCustomer.value.trim() : selectedPaymentCustomer;
 
   if (date !== today) {
@@ -798,25 +834,33 @@ if (refreshBtn) {
   };
 }
 
-// ========== EDIT/DELETE FUNCTIONS ==========
 function editExpense(id) {
   const item = appData.expenses.find(x => x.id === id);
   if (!item) { showToast("❌ Không tìm thấy chi phí"); return; }
 
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
   const today = getToday();
   const isToday = (item.date === today);
   const report = getReport(item.date);
   const isCompleted = (report.status === "completed");
 
-  if (!isToday && isCompleted && !(window.isAdminSync && window.isAdminSync())) {
-    alert("⚠️ Ngày này đã chốt, chỉ Quản lý mới được sửa!");
-    return;
+  // Admin: luôn được sửa
+  if (!isAdmin) {
+    // Nhân viên: không sửa ngày đã gửi
+    if (isCompleted) {
+      alert("⚠️ Ngày này đã gửi, chỉ Quản lý mới được sửa!");
+      return;
+    }
+    // Nhân viên: chỉ sửa ngày hôm nay
+    if (!isToday) {
+      alert("⚠️ Nhân viên chỉ được sửa dữ liệu của ngày hôm nay!");
+      return;
+    }
   }
 
   editingExpenseId = id;
   expensePopupTitle.innerText = "Sửa Chi Phí";
   
-  // Điền dữ liệu cũ vào form
   if (expenseNameInput) expenseNameInput.value = item.name;
   if (expenseQty) expenseQty.value = item.qty ? item.qty.toLocaleString("vi-VN") : "";
   if (expenseAmount) expenseAmount.value = item.amount.toLocaleString("vi-VN");
@@ -1068,20 +1112,42 @@ window.setExpenseName = function(name) {
   showToast(`✓ Đã chọn: ${name}`);
 };
 
-// ========== SAVE EXPENSE MỚI ==========
-// GHI ĐÈ LẠI saveExpenseBtn.onclick
+// ========== SAVE EXPENSE MỚI (HOÀN CHỈNH - CÓ CHẶN NGÀY TƯƠNG LAI) ==========
 saveExpenseBtn.onclick = () => {
-  if (!canAddData()) return;
-  
   const date = getCurrentDate();
   const today = getToday();
-
-  if (date !== today) {
-    const report = getReport(date);
-    if (report.status !== "completed") {
-      alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
+  const report = getReport(date);
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+  
+  // ========== CHẶN NGÀY TƯƠNG LAI ==========
+  if (date > today) {
+    alert(`⚠️ KHÔNG THỂ NHẬP DỮ LIỆU CHO NGÀY TƯƠNG LAI!\n\nNgày ${formatDisplayDate(date)} chưa xảy ra.`);
+    return;
+  }
+  
+  // Kiểm tra ngày hôm qua đã gửi chưa (cho nhân viên)
+  if (!isAdmin && date === today) {
+    if (!canAddData()) return;
+  }
+  
+  // KIỂM TRA QUYỀN NHÂN VIÊN
+  if (!isAdmin) {
+    // Nhân viên: KHÔNG được thêm vào ngày cũ đã gửi
+    if (date !== today && report.status === "completed") {
+      alert(`⚠️ Ngày ${formatDisplayDate(date)} đã được gửi!\n\nChỉ Quản lý mới được thêm dữ liệu vào ngày đã gửi.`);
       return;
     }
+    // Nhân viên: KHÔNG được thêm vào ngày cũ (dù chưa gửi)
+    if (date !== today) {
+      alert(`⚠️ Nhân viên chỉ được thêm dữ liệu cho ngày hôm nay!\n\nVui lòng chọn ngày ${formatDisplayDate(today)} để thêm chi phí.`);
+      return;
+    }
+  }
+  
+  // Admin: kiểm tra nếu ngày khác hôm nay và chưa chốt
+  if (isAdmin && date !== today && report.status !== "completed") {
+    alert(`⚠️ Ngày ${date} chưa được gửi! Vui lòng gửi ngày này trước khi thêm dữ liệu mới.`);
+    return;
   }
 
   let name = expenseNameInput ? expenseNameInput.value.trim() : "";
@@ -1117,7 +1183,6 @@ saveExpenseBtn.onclick = () => {
   };
 
   if (editingExpenseId) {
-    // 🔥 SỬA: Tìm và cập nhật đúng item
     const oldItem = appData.expenses.find(x => x.id === editingExpenseId);
     if (!oldItem) {
       showToast("❌ Không tìm thấy item cần sửa");
@@ -1125,7 +1190,7 @@ saveExpenseBtn.onclick = () => {
     }
     
     if (!isEditable(oldItem.date)) {
-      alert("⚠️ Ngày này đã chốt, không thể sửa!");
+      alert("⚠️ Ngày này đã gửi, không thể sửa!");
       return;
     }
     
@@ -1135,15 +1200,12 @@ saveExpenseBtn.onclick = () => {
     
     showToast(`✓ Đã sửa chi phí: ${name} - ${formatMoney(amount)}`);
   } else {
-    // THÊM MỚI
     appData.expenses.push(data);
     showToast(`✓ Đã thêm chi phí: ${name} - ${formatMoney(amount)}`);
   }
 
-  // Lưu và đồng bộ
   saveData();
   
-  // 🔥 Đảm bảo sync lên Firebase ngay
   if (typeof syncToFirebase === 'function') {
     setTimeout(() => syncToFirebase(), 100);
   }
@@ -1152,13 +1214,12 @@ saveExpenseBtn.onclick = () => {
   loadTodayData();
   renderRecentExpenses();
 
-  // Reset form
   if (expenseNameInput) expenseNameInput.value = "";
   expenseAmount.value = "";
   expenseQty.value = "";
   
   closePopup("expensePopup");
-};
+}; 
 
 // ========== BIẾN CHO DEBT ==========
 const debtCustomerInput = document.getElementById("debtCustomerInput");
@@ -1196,20 +1257,42 @@ window.setCustomerName = function(name) {
   showToast(`✓ Đã chọn: ${name}`);
 };
 
-// ========== SAVE DEBT MỚI ==========
-// GHI ĐÈ LẠI saveDebtBtn.onclick
+// ========== SAVE DEBT MỚI (HOÀN CHỈNH - CÓ CHẶN NGÀY TƯƠNG LAI) ==========
 saveDebtBtn.onclick = () => {
-  if (!canAddData()) return;
-  
   const date = getCurrentDate();
   const today = getToday();
-
-  if (date !== today) {
-    const report = getReport(date);
-    if (report.status !== "completed") {
-      alert(`⚠️ Ngày ${date} chưa chốt! Vui lòng chốt ngày này trước khi thêm dữ liệu mới.`);
+  const report = getReport(date);
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+  
+  // ========== CHẶN NGÀY TƯƠNG LAI ==========
+  if (date > today) {
+    alert(`⚠️ KHÔNG THỂ NHẬP DỮ LIỆU CHO NGÀY TƯƠNG LAI!\n\nNgày ${formatDisplayDate(date)} chưa xảy ra.`);
+    return;
+  }
+  
+  // Kiểm tra ngày hôm qua đã gửi chưa (cho nhân viên)
+  if (!isAdmin && date === today) {
+    if (!canAddData()) return;
+  }
+  
+  // KIỂM TRA QUYỀN NHÂN VIÊN
+  if (!isAdmin) {
+    // Nhân viên: KHÔNG được thêm vào ngày cũ đã gửi
+    if (date !== today && report.status === "completed") {
+      alert(`⚠️ Ngày ${formatDisplayDate(date)} đã được gửi!\n\nChỉ Quản lý mới được thêm dữ liệu vào ngày đã gửi.`);
       return;
     }
+    // Nhân viên: KHÔNG được thêm vào ngày cũ (dù chưa gửi)
+    if (date !== today) {
+      alert(`⚠️ Nhân viên chỉ được thêm dữ liệu cho ngày hôm nay!\n\nVui lòng chọn ngày ${formatDisplayDate(today)} để thêm công nợ.`);
+      return;
+    }
+  }
+  
+  // Admin: kiểm tra nếu ngày khác hôm nay và chưa chốt
+  if (isAdmin && date !== today && report.status !== "completed") {
+    alert(`⚠️ Ngày ${date} chưa được gửi! Vui lòng gửi ngày này trước khi thêm dữ liệu mới.`);
+    return;
   }
 
   let customer = debtCustomerInput ? debtCustomerInput.value.trim() : "";
@@ -1246,7 +1329,6 @@ saveDebtBtn.onclick = () => {
   };
 
   if (editingDebtId) {
-    // 🔥 SỬA: Cập nhật đúng item
     const oldItem = appData.debtTransactions.find(x => x.id === editingDebtId);
     if (!oldItem) {
       showToast("❌ Không tìm thấy item cần sửa");
@@ -1254,7 +1336,7 @@ saveDebtBtn.onclick = () => {
     }
     
     if (!isEditable(oldItem.date)) {
-      alert("⚠️ Ngày này đã chốt, không thể sửa!");
+      alert("⚠️ Ngày này đã gửi, không thể sửa!");
       return;
     }
     
@@ -1264,7 +1346,6 @@ saveDebtBtn.onclick = () => {
     
     showToast(`✓ Đã sửa công nợ: ${customer} - ${formatMoney(amount)}`);
   } else {
-    // THÊM MỚI
     appData.debtTransactions.push(data);
     showToast(`✓ Đã thêm công nợ: ${customer} - ${formatMoney(amount)}`);
   }
@@ -1281,7 +1362,6 @@ saveDebtBtn.onclick = () => {
   renderRecentPayments();
   renderCustomerDebtList();
 
-  // Reset form
   if (debtCustomerInput) debtCustomerInput.value = "";
   debtAmount.value = "";
   debtNote.value = "";
@@ -1317,22 +1397,107 @@ debtFab.onclick = () => {
   }, 100);
 };
 // ========== NÚT GỬI / ĐÃ GỬI ==========
+// ========== NÚT GỬI / ĐÃ GỬI ==========
 function updateSubmitButtonStatus() {
   const date = getCurrentDate();
   const report = getReport(date);
   const isCompleted = report.status === "completed";
+  const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
   
-  if (submitDayBtn) {
-    if (isCompleted) {
-      submitDayBtn.innerHTML = "✅ Đã gửi";
-      submitDayBtn.classList.add("submitted");
-      submitDayBtn.disabled = true;
+  const submitBtn = document.getElementById("submitDayBtn");
+  if (!submitBtn) return;
+  
+  if (isCompleted) {
+    submitBtn.innerHTML = "✅ Đã gửi";
+    submitBtn.classList.add("submitted");
+    submitBtn.disabled = true;
+  } else {
+    // Admin luôn có thể gửi, nhân viên chỉ gửi được ngày hôm nay
+    const canSend = isAdmin || (date === getToday());
+    if (canSend) {
+      submitBtn.innerHTML = "📤 Gửi báo cáo";
+      submitBtn.classList.remove("submitted");
+      submitBtn.disabled = false;
     } else {
-      submitDayBtn.innerHTML = "📤 Gửi báo cáo";
-      submitDayBtn.classList.remove("submitted");
-      submitDayBtn.disabled = false;
+      submitBtn.innerHTML = "🔒 Chưa gửi";
+      submitBtn.classList.add("submitted");
+      submitBtn.disabled = true;
     }
   }
+}
+
+// Gán sự kiện click cho nút
+const submitBtnElement = document.getElementById("submitDayBtn");
+if (submitBtnElement) {
+  submitBtnElement.onclick = async () => {
+    const date = getCurrentDate();
+    const today = getToday();
+    const report = getReport(date);
+    const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+    
+    // Kiểm tra nếu đã gửi rồi
+    if (report.status === "completed") {
+      showToast("⚠️ Báo cáo ngày này đã được gửi rồi!");
+      return;
+    }
+    
+    // Nhân viên: chỉ được gửi ngày hôm nay
+    if (!isAdmin && date !== today) {
+      showToast("⚠️ Nhân viên chỉ được gửi báo cáo ngày hôm nay!");
+      return;
+    }
+    
+    // Nhân viên: kiểm tra ngày hôm qua đã gửi chưa
+    if (!isAdmin && date === today) {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split("T")[0];
+      const yesterdayReport = getReport(yesterdayStr);
+      
+      if (yesterdayReport.status !== "completed") {
+        alert(`⚠️ KHÔNG THỂ GỬI BÁO CÁO HÔM NAY!\n\nNgày ${formatDisplayDate(yesterdayStr)} chưa được gửi.\n\nVui lòng gửi ngày ${formatDisplayDate(yesterdayStr)} trước.`);
+        showToast(`⚠️ Vui lòng gửi ngày ${formatDisplayDate(yesterdayStr)} trước!`);
+        
+        if (reportDate) {
+          reportDate.value = yesterdayStr;
+          loadTodayData();
+          updateSubmitButtonStatus();
+        }
+        return;
+      }
+    }
+    
+    // Chốt ngày (gửi báo cáo)
+    report.status = "completed";
+    saveData();
+    loadTodayData();
+    updateSubmitButtonStatus();
+    showToast(`✓ Đã gửi báo cáo ngày ${formatDisplayDate(date)}`);
+    
+    // Gửi báo cáo Telegram
+    const expenseTotalVal = calculateExpenseTotal(date);
+    const debtTotalVal = calculateDebtTotal(date);
+    const expenses = appData.expenses.filter(x => x.date === date && !x.deleted);
+    const debts = appData.debtTransactions.filter(x => x.date === date && x.type === "debt_add" && !x.deleted);
+    const allDebtTransactions = appData.debtTransactions.filter(x => !x.deleted);
+    
+    if (typeof sendFullReport === 'function') {
+      const sent = await sendFullReport(date, report, expenses, debts, allDebtTransactions);
+      if (sent) {
+        showToast(`✓ Đã gửi báo cáo Telegram ngày ${formatDisplayDate(date)}`);
+      } else {
+        showToast(`⚠️ Gửi báo cáo Telegram thất bại`);
+      }
+    } else if (typeof sendQuickReport === 'function') {
+      await sendQuickReport(date, report, expenseTotalVal, debtTotalVal);
+      showToast(`✓ Đã gửi báo cáo Telegram ngày ${formatDisplayDate(date)}`);
+    }
+    
+    const missingBtn = document.getElementById("missingReportBtn");
+    if (missingBtn) missingBtn.remove();
+    
+    console.log(`✅ Đã gửi báo cáo ngày ${date}`);
+  };
 }
 
 
