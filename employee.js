@@ -108,6 +108,70 @@ if (typeof firebase !== 'undefined' && firebase.auth) {
     setTimeout(updateBodyAdminClass, 500);
   });
 }
+
+// Thêm vào employee.js, ví dụ sau hàm deleteExpenseAndRefreshPopup
+
+window.editExpense = function(id) {
+    const expense = appData.expenses.find(x => x.id === id);
+    if (!expense) {
+        showToast("❌ Không tìm thấy chi phí");
+        return;
+    }
+    
+    // Kiểm tra quyền
+    const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+    const today = getToday();
+    const report = getReport(expense.date);
+    
+    if (!isAdmin && expense.date !== today) {
+        alert("⚠️ Chỉ được sửa chi phí của ngày hôm nay!");
+        return;
+    }
+    if (!isAdmin && report.status === "completed" && expense.date !== today) {
+        alert("⚠️ Ngày đã gửi, không thể sửa!");
+        return;
+    }
+    
+    // Set editing mode
+    editingExpenseId = id;
+    expensePopupTitle.innerText = "Sửa Chi Phí";
+    expenseNameInput.value = expense.name;
+    expenseAmount.value = expense.amount.toLocaleString("vi-VN");
+    expenseQty.value = expense.qty || "";
+    
+    openPopup("expensePopup");
+    expenseNameInput.focus();
+};
+
+window.editDebt = function(id) {
+    const debt = appData.debtTransactions.find(x => x.id === id);
+    if (!debt) {
+        showToast("❌ Không tìm thấy công nợ");
+        return;
+    }
+    
+    const isAdmin = window.isAdminSync ? window.isAdminSync() : false;
+    const today = getToday();
+    const report = getReport(debt.date);
+    
+    if (!isAdmin && debt.date !== today) {
+        alert("⚠️ Chỉ được sửa công nợ của ngày hôm nay!");
+        return;
+    }
+    if (!isAdmin && report.status === "completed" && debt.date !== today) {
+        alert("⚠️ Ngày đã gửi, không thể sửa!");
+        return;
+    }
+    
+    editingDebtId = id;
+    debtPopupTitle.innerText = "Sửa Công Nợ";
+    debtCustomerInput.value = debt.customer;
+    debtAmount.value = debt.amount.toLocaleString("vi-VN");
+    debtNote.value = debt.note || "";
+    
+    openPopup("debtPopup");
+    debtCustomerInput.focus();
+};
 function renderRecentPayments() {
   if (!recentPaymentWrap) return;
   if (!appData || !appData.recent || !appData.recent.customers || appData.recent.customers.length === 0) {
