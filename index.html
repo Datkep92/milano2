@@ -93,7 +93,7 @@ window.APP_VERSION = "1.0.0";
   
   <!-- Hàng 3: TIỀN MẶT + CHUYỂN KHOẢN -->
   <div class="summary-item">
-    <label>💵 Tiền mặt</label>
+    <label>💵 Thực nhận </label>
     <input type="text" id="cashInput" placeholder="0" inputmode="numeric">
   </div>
   <div class="summary-item">
@@ -169,7 +169,6 @@ window.APP_VERSION = "1.0.0";
 
     <!-- CARD THỐNG KÊ TỔNG HỢP -->
     <div class="card">
-      <h2 id="statsTitle">📈 Tổng Kết Kỳ</h2>
       <div class="manager-grid">
   <!-- Hàng 1 -->
   <div class="manager-box" id="revenueBox" style="cursor: pointer;">
@@ -190,7 +189,7 @@ window.APP_VERSION = "1.0.0";
   
   <!-- Hàng 2 -->
   <div class="manager-box" id="cashBox" style="cursor: pointer;">
-    <label>💵 Tiền mặt</label>
+    <label>💵 Thực nhận</label>
     <div class="big-value" id="managerCash">0đ</div>
     <div class="summary-hint">Click chi tiết</div>
   </div>
@@ -322,7 +321,7 @@ window.APP_VERSION = "1.0.0";
       </div>
       <input type="text" id="paymentAmount" placeholder="Nhập số tiền" inputmode="numeric">
       <select id="paymentMethod">
-        <option value="TM">💵 Tiền mặt</option>
+        <option value="TM">💵 Thực nhận</option>
         <option value="CK">🏦 Chuyển khoản</option>
       </select>
       <button class="primary-btn" id="savePaymentBtn">✅ Xác nhận</button>

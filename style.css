@@ -2206,17 +2206,7 @@ textarea {
   background: var(--border);
 }
 
-.recent-item .action-btn-edit,
-.recent-item .action-btn-delete {
-  padding: 6px 10px;
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-}
+
 
 .recent-item .action-btn-edit:hover {
   background: var(--accent-light);
@@ -2228,42 +2218,3 @@ textarea {
   color: var(--danger);
 }
 
-/* MẶC ĐỊNH: Ẩn nút sửa/xóa */
-.recent-item .action-btn-edit,
-.recent-item .action-btn-delete {
-  display: none;
-}
-
-/* KHI CÓ CLASS admin-mode: HIỂN THỊ NÚT SỬA/XÓA */
-body.admin-mode .recent-item .action-btn-edit,
-body.admin-mode .recent-item .action-btn-delete {
-  display: inline-flex;
-}
-/* Thêm vào style.css */
-.debt-badge.deposit {
-  background: var(--success-light);
-  color: var(--success);
-}
-
-.debt-transaction-balance {
-  font-size: 11px;
-  color: var(--text-light);
-  min-width: 80px;
-  text-align: right;
-}
-
-/* style.css - THÊM hoặc SỬA */
-body.admin-mode .recent-item .action-btn-edit,
-body.admin-mode .recent-item .action-btn-delete,
-body.admin-mode .manager-item .action-btn-edit,
-body.admin-mode .manager-item .action-btn-delete {
-  display: inline-flex !important;  /* THÊM !important */
-}
-
-/* Đảm bảo khi không có admin-mode thì ẩn */
-.recent-item .action-btn-edit,
-.recent-item .action-btn-delete,
-.manager-item .action-btn-edit,
-.manager-item .action-btn-delete {
-  display: none !important;
-}
