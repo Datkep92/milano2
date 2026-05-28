@@ -2251,3 +2251,19 @@ body.admin-mode .recent-item .action-btn-delete {
   min-width: 80px;
   text-align: right;
 }
+
+/* style.css - THÊM hoặc SỬA */
+body.admin-mode .recent-item .action-btn-edit,
+body.admin-mode .recent-item .action-btn-delete,
+body.admin-mode .manager-item .action-btn-edit,
+body.admin-mode .manager-item .action-btn-delete {
+  display: inline-flex !important;  /* THÊM !important */
+}
+
+/* Đảm bảo khi không có admin-mode thì ẩn */
+.recent-item .action-btn-edit,
+.recent-item .action-btn-delete,
+.manager-item .action-btn-edit,
+.manager-item .action-btn-delete {
+  display: none !important;
+}

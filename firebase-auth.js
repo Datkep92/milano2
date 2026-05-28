@@ -239,10 +239,9 @@ async function showApp(user) {
   if (paymentFab) paymentFab.classList.remove('hidden');
   if (adminExpenseFab) adminExpenseFab.classList.add('hidden');
   
-  // ========== CHỈ KHỞI TẠO FIREBASE SYNC (KHÔNG CÓ REALTIME UI) ==========
-  if (typeof initFirebaseSync === 'function') {
-    await initFirebaseSync();
-  }
+ if (typeof initVersionSync === 'function') {
+  await initVersionSync();
+}
   
   // KHÔNG gọi initRealtimeUI nữa để tránh xung đột listener
   

@@ -1,26 +1,34 @@
-// ========== FIREBASE SYNC PRO - DÙNG CHUNG DỮ LIỆU (CÓ ADMIN EXPENSES) ==========
-// ĐÃ SỬA LỖI ĐỒNG BỘ 2 CHIỀU
+// ========== FIREBASE SYNC V2 - HOÀN CHỈNH ==========
+// Nguyên tắc: Firebase là MASTER, localStorage là CACHE
 
-// ========== CẤU HÌNH ==========
 const STORE_ID = "milano_coffee_259";
-const SYNC_DEBOUNCE_MS = 200;        // Giảm từ 500ms xuống 200ms
-const REALTIME_LOCK_MS = 100;        // Giảm từ 500ms xuống 100ms
-const MAX_RETRY_COUNT = 3;           // Số lần retry tối đa khi load thất bại
-const RETRY_DELAY_MS = 1000;         // Thời gian chờ giữa các lần retry
-let isSyncing = false;
-let syncQueue = [];
+const SYNC_DEBOUNCE_MS = 500;
+const MAX_RETRY_COUNT = 3;
+const RETRY_DELAY_MS = 1000;
+
+// Cache structure
+let cache = {
+  data: {
+    reports: {},
+    expenses: [],
+    adminExpenses: [],
+    debtTransactions: []
+  },
+  lastSyncTime: 0,
+  lastServerVersion: 0,
+  categories: { expenses: [], adminExpenses: [], customers: [] },
+  recent: { expenses: [], adminExpenses: [], customers: [] }
+};
+
 let deviceId = null;
 let syncDebounceTimer = null;
-let isLoading = false;
 let isInitialized = false;
-let currentUserId = null;
-let realtimeListenerRef = null; // Tham chiếu để cleanup
+let pendingSyncQueue = [];
+let isOnline = navigator.onLine;
+let realtimeListeners = {};
+let isRealtimeUpdate = false;
 
-// Flags
-window._isRealtimeUpdate = false;
-window._syncVersion = 0;
-
-// Khởi tạo device ID
+// ========== KHỞI TẠO DEVICE ID ==========
 function initDeviceId() {
   deviceId = localStorage.getItem("deviceId");
   if (!deviceId) {
@@ -30,324 +38,99 @@ function initDeviceId() {
   return deviceId;
 }
 
-function saveToLocal(data, skipVersion = false) {
-  if (!data) return;
-  
-  if (!skipVersion) {
-    data._version = (data._version || 0) + 1;
-    data._lastModified = Date.now();
-    data._lastModifiedBy = deviceId;
-  }
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  
-  // CẬP NHẬT TRỰC TIẾP BIẾN appData GỐC (cùng tham chiếu)
-  // Xóa dữ liệu cũ trong appData
-  Object.keys(appData).forEach(key => {
-    delete appData[key];
-  });
-  // Gán dữ liệu mới
-  Object.assign(appData, data);
-  
-  if (typeof ensureAppDataStructure === 'function') {
-    ensureAppDataStructure();
-  }
-  
-  return data._version;
-}
-
-// ========== ĐỒNG BỘ LÊN FIREBASE ==========
-async function syncToFirebase() {
-  if (window._isRealtimeUpdate) {
-    console.log("⏭️ Bỏ qua sync (đang nhận dữ liệu từ realtime)");
-    return;
-  }
-  
-  if (isSyncing) {
-    return new Promise((resolve) => {
-      syncQueue.push(resolve);
-    });
-  }
-  
-  isSyncing = true;
-  
-  try {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-    
-    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!localData) return;
-    
-    const role = await getUserRole(user.uid);
-    const isAdminUser = role === ROLES.ADMIN;
-    
-    console.log(`🔄 ${isAdminUser ? 'Admin' : 'Nhân viên'} đang đồng bộ...`);
-    
-    // Lấy tất cả ngày có dữ liệu thay đổi
-    const allDates = new Set();
-    
-    Object.keys(localData.reports || {}).forEach(date => allDates.add(date));
-    (localData.expenses || []).forEach(exp => { if (exp.date) allDates.add(exp.date); });
-    (localData.adminExpenses || []).forEach(exp => { if (exp.date) allDates.add(exp.date); });
-    (localData.debtTransactions || []).forEach(debt => { if (debt.date) allDates.add(debt.date); });
-    
-    const updates = {};
-    
-    for (const date of allDates) {
-      const [year, month, day] = date.split('-');
-      
-      // Sync report
-      if (localData.reports[date]) {
-        const reportPath = `cafeData/${STORE_ID}/reports/${year}/${month}/${day}`;
-        updates[reportPath] = {
-          ...localData.reports[date],
-          _syncedAt: firebase.database.ServerValue.TIMESTAMP,
-          _syncedBy: user.uid,
-          _syncedByEmail: user.email,
-          _syncedByRole: role,
-          _syncedByDevice: deviceId
-        };
-      }
-      
-      // Sync expenses
-      const dayExpenses = (localData.expenses || []).filter(e => e.date === date);
-      for (const exp of dayExpenses) {
-        const expPath = `cafeData/${STORE_ID}/expenses/${year}/${month}/${day}/${exp.id}`;
-        if (exp.deleted) {
-          updates[expPath] = {
-            ...exp,
-            deleted: true,
-            _deletedAt: Date.now(),
-            _deletedBy: user.email,
-            _deletedByDevice: deviceId,
-            _modifiedAt: Date.now(),
-            _modifiedBy: user.email,
-            _modifiedByDevice: deviceId
-          };
-        } else {
-          updates[expPath] = {
-            name: exp.name,
-            amount: exp.amount,
-            qty: exp.qty || 0,
-            deleted: false,
-            _modifiedAt: exp._modifiedAt || Date.now(),
-            _modifiedBy: user.email,
-            _modifiedByRole: role,
-            _modifiedByDevice: deviceId
-          };
-        }
-      }
-      
-      // Sync debts
-      const dayDebts = (localData.debtTransactions || []).filter(d => d.date === date);
-      for (const debt of dayDebts) {
-        const debtPath = `cafeData/${STORE_ID}/debtTransactions/${year}/${month}/${day}/${debt.id}`;
-        if (debt.deleted) {
-          updates[debtPath] = {
-            ...debt,
-            deleted: true,
-            _deletedAt: Date.now(),
-            _deletedBy: user.email,
-            _deletedByDevice: deviceId,
-            _modifiedAt: Date.now(),
-            _modifiedBy: user.email,
-            _modifiedByDevice: deviceId
-          };
-        } else {
-          updates[debtPath] = {
-            customer: debt.customer,
-            amount: debt.amount,
-            type: debt.type,
-            note: debt.note || '',
-            method: debt.method || '',
-            deleted: false,
-            _modifiedAt: debt._modifiedAt || Date.now(),
-            _modifiedBy: user.email,
-            _modifiedByRole: role,
-            _modifiedByDevice: deviceId
-          };
-        }
-      }
-      
-      // Sync adminExpenses
-      const dayAdminExpenses = (localData.adminExpenses || []).filter(e => e.date === date);
-      for (const exp of dayAdminExpenses) {
-        const expPath = `cafeData/${STORE_ID}/adminExpenses/${year}/${month}/${day}/${exp.id}`;
-        if (exp.deleted) {
-          updates[expPath] = {
-            ...exp,
-            deleted: true,
-            _deletedAt: Date.now(),
-            _deletedBy: user.email,
-            _deletedByDevice: deviceId
-          };
-        } else {
-          updates[expPath] = {
-            name: exp.name,
-            amount: exp.amount,
-            qty: exp.qty || 0,
-            deleted: false,
-            _modifiedAt: exp._modifiedAt || Date.now(),
-            _modifiedBy: user.email,
-            _modifiedByRole: role,
-            _modifiedByDevice: deviceId
-          };
-        }
-      }
-    }
-    
-    if (Object.keys(updates).length > 0) {
-      await database.ref().update(updates);
-      console.log(`✅ Đã đồng bộ ${Object.keys(updates).length} thay đổi lên server`);
-    }
-    
-    // Sync metadata
+// ========== ĐỌC CACHE ==========
+function loadCache() {
+  const cached = localStorage.getItem(STORAGE_KEY + "_cache");
+  if (cached && cached !== "undefined" && cached !== "null") {
     try {
-      const metadataRef = database.ref(`cafeData/${STORE_ID}/metadata`);
-      
-      await metadataRef.transaction((currentData) => {
-        const localCategories = localData.categories || { expenses: [], adminExpenses: [], customers: [] };
-        const localRecent = localData.recent || { expenses: [], adminExpenses: [], customers: [] };
-        
-        if (currentData === null) {
-          return {
-            version: Date.now(),
-            lastSync: firebase.database.ServerValue.TIMESTAMP,
-            syncedBy: user.uid,
-            syncedByEmail: user.email,
-            syncedByDevice: deviceId,
-            categories: localCategories,
-            recent: localRecent
-          };
-        }
-        
-        const mergedCategories = {
-          expenses: [...new Set([...(currentData.categories?.expenses || []), ...(localCategories.expenses || [])])],
-          adminExpenses: [...new Set([...(currentData.categories?.adminExpenses || []), ...(localCategories.adminExpenses || [])])],
-          customers: [...new Set([...(currentData.categories?.customers || []), ...(localCategories.customers || [])])]
-        };
-        
-        const mergedRecent = {
-          expenses: [...new Set([...(localRecent.expenses || []), ...(currentData.recent?.expenses || [])])].slice(0, 10),
-          adminExpenses: [...new Set([...(localRecent.adminExpenses || []), ...(currentData.recent?.adminExpenses || [])])].slice(0, 10),
-          customers: [...new Set([...(localRecent.customers || []), ...(currentData.recent?.customers || [])])].slice(0, 10)
-        };
-        
-        const categoriesChanged = JSON.stringify(mergedCategories) !== JSON.stringify(currentData.categories);
-        const recentChanged = JSON.stringify(mergedRecent) !== JSON.stringify(currentData.recent);
-        
-        if (!categoriesChanged && !recentChanged) return undefined;
-        
-        return {
-          version: Date.now(),
-          lastSync: firebase.database.ServerValue.TIMESTAMP,
-          syncedBy: user.uid,
-          syncedByEmail: user.email,
-          syncedByDevice: deviceId,
-          categories: mergedCategories,
-          recent: mergedRecent
-        };
-      });
-      
-      console.log(`✅ Đã đồng bộ metadata lên server`);
-    } catch (metadataError) {
-      console.error("❌ Lỗi sync metadata:", metadataError);
-    }
-    
-  } catch (error) {
-    console.error("❌ Lỗi sync:", error);
-  } finally {
-    isSyncing = false;
-    if (syncQueue.length > 0) {
-      const resolve = syncQueue.shift();
-      setTimeout(() => syncToFirebase().then(resolve), 100);
+      const parsed = JSON.parse(cached);
+      cache = {
+        data: parsed.data || { reports: {}, expenses: [], adminExpenses: [], debtTransactions: [] },
+        lastSyncTime: parsed.lastSyncTime || 0,
+        lastServerVersion: parsed.lastServerVersion || 0,
+        categories: parsed.categories || { expenses: [], adminExpenses: [], customers: [] },
+        recent: parsed.recent || { expenses: [], adminExpenses: [], customers: [] }
+      };
+      console.log("📦 Đã đọc cache, lastSyncTime:", cache.lastSyncTime);
+    } catch (e) {
+      console.error("Lỗi đọc cache:", e);
     }
   }
+  
+  // Đồng bộ với appData
+  if (typeof appData !== 'undefined') {
+    appData.expenses = cache.data.expenses;
+    appData.adminExpenses = cache.data.adminExpenses;
+    appData.debtTransactions = cache.data.debtTransactions;
+    appData.reports = cache.data.reports;
+    appData.categories = cache.categories;
+    appData.recent = cache.recent;
+  }
+  
+  return cache;
 }
-// Thêm vào cuối file employee.js hoặc firebase-sync.js
-window.forceSyncNow = async function() {
-  if (typeof showToast === 'function') {
-    showToast("🔄 Đang đồng bộ dữ liệu...");
-  }
-  
-  if (typeof syncToFirebase === 'function') {
-    await syncToFirebase();
-  }
-  
-  if (typeof loadFromFirebase === 'function') {
-    await loadFromFirebase();
-  }
-  
-  // Refresh toàn bộ UI
-  if (typeof loadTodayData === 'function') loadTodayData();
-  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
-  if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
-  if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
-  if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
-  
-  if (typeof showToast === 'function') {
-    showToast("✅ Đồng bộ hoàn tất!");
-  }
-};
 
-// Thêm nút đồng bộ thủ công (tùy chọn)
-const syncBtn = document.createElement('button');
-syncBtn.id = 'manualSyncBtn';
-syncBtn.innerHTML = '🔄 Đồng bộ';
-syncBtn.style.cssText = 'position:fixed; bottom:80px; right:16px; z-index:999; background:var(--primary); color:white; border:none; border-radius:50px; padding:10px 16px; font-size:12px; box-shadow:0 2px 8px rgba(0,0,0,0.2); cursor:pointer;';
-syncBtn.onclick = () => window.forceSyncNow();
-document.body.appendChild(syncBtn);
-// ========== TẢI DỮ LIỆU TỪ FIREBASE (CÓ RETRY) ==========
-async function loadFromFirebase(retryCount = 0) {
-  if (isLoading) {
-    console.log("⏭️ Đang load, bỏ qua");
-    return false;
+// ========== LƯU CACHE ==========
+function saveCache() {
+  const cacheToSave = {
+    data: {
+      reports: cache.data.reports || {},
+      expenses: cache.data.expenses || [],
+      adminExpenses: cache.data.adminExpenses || [],
+      debtTransactions: cache.data.debtTransactions || []
+    },
+    lastSyncTime: cache.lastSyncTime || Date.now(),
+    lastServerVersion: cache.lastServerVersion || 0,
+    categories: cache.categories || { expenses: [], adminExpenses: [], customers: [] },
+    recent: cache.recent || { expenses: [], adminExpenses: [], customers: [] }
+  };
+  
+  localStorage.setItem(STORAGE_KEY + "_cache", JSON.stringify(cacheToSave));
+  
+  // Đồng bộ với appData
+  if (typeof appData !== 'undefined') {
+    appData.expenses = cacheToSave.data.expenses;
+    appData.adminExpenses = cacheToSave.data.adminExpenses;
+    appData.debtTransactions = cacheToSave.data.debtTransactions;
+    appData.reports = cacheToSave.data.reports;
+    appData.categories = cacheToSave.categories;
+    appData.recent = cacheToSave.recent;
   }
   
-  isLoading = true;
-  
+  console.log("💾 Đã lưu cache, expenses:", cache.data.expenses.length);
+}
+
+// ========== TẠO ID DUY NHẤT ==========
+function generateId(prefix) {
+  return prefix + '_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+}
+
+// ========== TẢI DỮ LIỆU TỪ FIREBASE ==========
+async function loadFromFirebase(retryCount = 0) {
   try {
     const user = firebase.auth().currentUser;
     if (!user) return false;
     
-    const role = await getUserRole(user.uid);
-    const isAdminUser = role === ROLES.ADMIN;
+    console.log("📥 Đang tải dữ liệu từ Firebase...");
     
-    console.log(`📥 ${isAdminUser ? 'Admin' : 'Nhân viên'} đang tải dữ liệu từ server... (lần thử ${retryCount + 1})`);
-    
-    // Tải metadata
+    // Lấy metadata trước
     const metadataSnap = await database.ref(`cafeData/${STORE_ID}/metadata`).once('value');
     const metadata = metadataSnap.val() || {};
     
-    // Khởi tạo dữ liệu mới nếu chưa có (chỉ admin mới được tạo)
-    if (Object.keys(metadata).length === 0 && isAdminUser) {
-      console.log("📝 Chưa có dữ liệu trên server, khởi tạo mới...");
-      const emptyData = {
-        _version: 1,
-        _lastModified: Date.now(),
-        reports: {},
-        expenses: [],
-        adminExpenses: [],
-        debtTransactions: [],
-        categories: { expenses: [], adminExpenses: [], customers: [] },
-        recent: { expenses: [], adminExpenses: [], customers: [] }
-      };
-      saveToLocal(emptyData, true);
-      await syncToFirebase();
-      isLoading = false;
+    // Lấy version mới nhất từ server
+    const serverVersion = metadata.version || 0;
+    
+    // Nếu không có thay đổi, bỏ qua
+    if (serverVersion <= cache.lastServerVersion && cache.lastServerVersion > 0) {
+      console.log(`⏭️ Không có thay đổi (server: ${serverVersion}, cache: ${cache.lastServerVersion})`);
       return true;
     }
     
-    // Tải dữ liệu 3 tháng gần nhất
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-    const startDate = threeMonthsAgo.toISOString().split('T')[0];
+    // Lấy tất cả ngày có dữ liệu (60 ngày gần nhất)
+    const sixtyDaysAgo = new Date();
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+    const startDate = sixtyDaysAgo.toISOString().split('T')[0];
     const endDate = new Date().toISOString().split('T')[0];
-    
-    const reports = {};
-    const expenses = [];
-    const adminExpenses = [];
-    const debts = [];
     
     const dates = [];
     const start = new Date(startDate);
@@ -356,7 +139,13 @@ async function loadFromFirebase(retryCount = 0) {
       dates.push(d.toISOString().split('T')[0]);
     }
     
-    // Tải từng ngày - sử dụng Promise.all để tải song song
+    const newData = {
+      reports: {},
+      expenses: [],
+      adminExpenses: [],
+      debtTransactions: []
+    };
+    
     const batchSize = 10;
     for (let i = 0; i < dates.length; i += batchSize) {
       const batch = dates.slice(i, i + batchSize);
@@ -371,525 +160,453 @@ async function loadFromFirebase(retryCount = 0) {
         ]);
         
         const report = reportSnap.val();
-        if (report) {
-          const cleanReport = { ...report };
-          delete cleanReport._syncedAt;
-          delete cleanReport._syncedBy;
-          delete cleanReport._syncedByEmail;
-          delete cleanReport._syncedByRole;
-          delete cleanReport._syncedByDevice;
-          reports[date] = cleanReport;
+        if (report && Object.keys(report).length > 0) {
+          newData.reports[date] = report;
         }
         
         const expensesMap = expensesSnap.val() || {};
-        Object.entries(expensesMap).forEach(([id, exp]) => {
+        for (const [id, exp] of Object.entries(expensesMap)) {
           if (!exp.deleted) {
-            const cleanExp = { ...exp };
-            delete cleanExp._modifiedBy;
-            delete cleanExp._modifiedByRole;
-            delete cleanExp._modifiedByDevice;
-            expenses.push({ id, date, ...cleanExp });
+            newData.expenses.push({ id, businessDate: date, ...exp });
           }
-        });
+        }
         
         const adminExpensesMap = adminExpensesSnap.val() || {};
-        Object.entries(adminExpensesMap).forEach(([id, exp]) => {
+        for (const [id, exp] of Object.entries(adminExpensesMap)) {
           if (!exp.deleted) {
-            const cleanExp = { ...exp };
-            delete cleanExp._modifiedBy;
-            delete cleanExp._modifiedByRole;
-            delete cleanExp._modifiedByDevice;
-            adminExpenses.push({ id, date, ...cleanExp });
+            newData.adminExpenses.push({ id, businessDate: date, ...exp });
           }
-        });
+        }
         
         const debtsMap = debtsSnap.val() || {};
-        Object.entries(debtsMap).forEach(([id, debt]) => {
+        for (const [id, debt] of Object.entries(debtsMap)) {
           if (!debt.deleted) {
-            const cleanDebt = { ...debt };
-            delete cleanDebt._modifiedBy;
-            delete cleanDebt._modifiedByRole;
-            delete cleanDebt._modifiedByDevice;
-            debts.push({ id, date, ...cleanDebt });
+            newData.debtTransactions.push({ id, businessDate: date, ...debt });
           }
-        });
+        }
       }));
     }
     
-    const structuredData = {
-      _version: metadata.version || 1,
-      _lastModified: Date.now(),
-      _lastModifiedBy: deviceId,
-      reports: reports,
-      expenses: expenses,
-      adminExpenses: adminExpenses,
-      debtTransactions: debts,
-      categories: metadata.categories || { expenses: [], adminExpenses: [], customers: [] },
-      recent: metadata.recent || { expenses: [], adminExpenses: [], customers: [] }
-    };
+    // Cập nhật cache
+    cache.data = newData;
+    cache.lastSyncTime = Date.now();
+    cache.lastServerVersion = serverVersion;
+    cache.categories = metadata.categories || cache.categories;
+    cache.recent = metadata.recent || cache.recent;
     
-    saveToLocal(structuredData, true);
+    saveCache();
     
-    console.log(`✅ Đã tải: ${Object.keys(reports).length} reports, ${expenses.length} expenses, ${adminExpenses.length} adminExpenses, ${debts.length} debts`);
-    
-    isLoading = false;
+    console.log(`✅ Đã tải: ${Object.keys(newData.reports).length} reports, ${newData.expenses.length} expenses`);
     return true;
     
   } catch (error) {
     console.error("❌ Lỗi tải:", error);
-    isLoading = false;
-    
-    // Retry logic
     if (retryCount < MAX_RETRY_COUNT) {
-      console.log(`🔄 Đang thử lại lần ${retryCount + 2} sau ${RETRY_DELAY_MS}ms...`);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
       return loadFromFirebase(retryCount + 1);
     }
-    
-    console.error("❌ Đã thử tối đa số lần, vẫn thất bại");
     return false;
   }
 }
 
+// ========== LƯU LÊN FIREBASE DÙNG TRANSACTION ==========
+async function saveToFirebase(type, id, newData, oldVersion) {
+  const user = firebase.auth().currentUser;
+  if (!user) {
+    pendingSyncQueue.push({ type, id, newData, oldVersion, timestamp: Date.now() });
+    console.log(`📴 Offline: đã lưu vào queue (${type}/${id})`);
+    return false;
+  }
+  
+  try {
+    const businessDate = newData.businessDate;
+    const [year, month, day] = businessDate.split('-');
+    let path = '';
+    
+    if (type === 'expense') {
+      path = `cafeData/${STORE_ID}/expenses/${year}/${month}/${day}/${id}`;
+    } else if (type === 'debt') {
+      path = `cafeData/${STORE_ID}/debtTransactions/${year}/${month}/${day}/${id}`;
+    } else if (type === 'adminExpense') {
+      path = `cafeData/${STORE_ID}/adminExpenses/${year}/${month}/${day}/${id}`;
+    } else if (type === 'report') {
+      path = `cafeData/${STORE_ID}/reports/${year}/${month}/${day}`;
+    } else {
+      return false;
+    }
+    
+    const ref = database.ref(path);
+    
+    // Dùng transaction để tránh conflict
+    const result = await ref.transaction((currentData) => {
+      if (currentData === null) {
+        return newData;
+      }
+      
+      // Kiểm tra version conflict
+      if (oldVersion !== undefined && currentData.version !== oldVersion) {
+        console.warn(`⚠️ Conflict: local version ${oldVersion} != server version ${currentData.version}`);
+        return undefined;
+      }
+      
+      // Tăng version và cập nhật
+      newData.version = (currentData.version || 0) + 1;
+      newData.updatedAt = Date.now();
+      newData.updatedBy = user.uid;
+      
+      return newData;
+    });
+    
+    if (result.committed) {
+      console.log(`✅ Đã lưu ${type}/${id} (version ${newData.version})`);
+      return true;
+    } else {
+      console.warn(`⚠️ Conflict ở ${type}/${id}, đang reload...`);
+      await loadFromFirebase();
+      return false;
+    }
+    
+  } catch (error) {
+    console.error(`❌ Lỗi lưu ${type}/${id}:`, error);
+    return false;
+  }
+}
+
+// ========== SOFT DELETE ==========
+async function softDeleteItem(type, id, businessDate) {
+  const user = firebase.auth().currentUser;
+  if (!user) return false;
+  
+  const [year, month, day] = businessDate.split('-');
+  let path = '';
+  
+  if (type === 'expense') {
+    path = `cafeData/${STORE_ID}/expenses/${year}/${month}/${day}/${id}`;
+  } else if (type === 'debt') {
+    path = `cafeData/${STORE_ID}/debtTransactions/${year}/${month}/${day}/${id}`;
+  } else {
+    return false;
+  }
+  
+  const ref = database.ref(path);
+  
+  const result = await ref.transaction((currentData) => {
+    if (!currentData) return undefined;
+    
+    currentData.deleted = true;
+    currentData.deletedAt = Date.now();
+    currentData.deletedBy = user.uid;
+    currentData.version = (currentData.version || 0) + 1;
+    
+    return currentData;
+  });
+  
+  if (result.committed) {
+    console.log(`🗑️ Đã soft delete ${type}/${id}`);
+    return true;
+  }
+  return false;
+}
+
+// ========== API PUBLIC ==========
+async function createExpense(data) {
+  const id = generateId('exp');
+  const user = firebase.auth().currentUser;
+  const timestamp = Date.now();
+  
+  const newData = {
+    id: id,
+    name: data.name,
+    amount: data.amount,
+    qty: data.qty || 1,
+    businessDate: data.businessDate,
+    version: 1,
+    deleted: false,
+    createdAt: timestamp,
+    createdBy: user?.uid || 'unknown',
+    updatedAt: timestamp,
+    updatedBy: user?.uid || 'unknown'
+  };
+  
+  // Lưu vào cache trước
+  cache.data.expenses.push({ id, businessDate: data.businessDate, ...newData });
+  saveCache();
+  
+  // Sync lên Firebase
+  const success = await saveToFirebase('expense', id, newData, 0);
+  if (!success && !isOnline) {
+    pendingSyncQueue.push({ type: 'expense', id, newData, oldVersion: 0 });
+  }
+  
+  refreshUIAfterUpdate();
+  return { id, success };
+}
+
+async function updateExpense(id, updates, oldVersion) {
+  const index = cache.data.expenses.findIndex(e => e.id === id);
+  if (index === -1) return false;
+  
+  const updatedData = { ...cache.data.expenses[index], ...updates };
+  delete updatedData.id;
+  delete updatedData.businessDate;
+  
+  updatedData.updatedAt = Date.now();
+  updatedData.version = oldVersion + 1;
+  
+  // Cập nhật cache
+  cache.data.expenses[index] = { ...cache.data.expenses[index], ...updates, version: oldVersion + 1 };
+  saveCache();
+  
+  const success = await saveToFirebase('expense', id, updatedData, oldVersion);
+  if (!success && !isOnline) {
+    pendingSyncQueue.push({ type: 'expense', id, newData: updatedData, oldVersion });
+  }
+  
+  refreshUIAfterUpdate();
+  return success;
+}
+
+async function deleteExpense(id, businessDate) {
+  // Xóa khỏi cache
+  cache.data.expenses = cache.data.expenses.filter(e => e.id !== id);
+  saveCache();
+  
+  const success = await softDeleteItem('expense', id, businessDate);
+  refreshUIAfterUpdate();
+  return success;
+}
+
+async function createDebt(data) {
+  const id = generateId('debt');
+  const user = firebase.auth().currentUser;
+  const timestamp = Date.now();
+  
+  const newData = {
+    id: id,
+    customer: data.customer,
+    amount: data.amount,
+    type: data.type || 'debt_add',
+    note: data.note || '',
+    method: data.method || '',
+    businessDate: data.businessDate,
+    version: 1,
+    deleted: false,
+    createdAt: timestamp,
+    createdBy: user?.uid || 'unknown',
+    updatedAt: timestamp,
+    updatedBy: user?.uid || 'unknown'
+  };
+  
+  cache.data.debtTransactions.push({ id, businessDate: data.businessDate, ...newData });
+  saveCache();
+  
+  const success = await saveToFirebase('debt', id, newData, 0);
+  refreshUIAfterUpdate();
+  return { id, success };
+}
+
+async function updateDebt(id, updates, oldVersion) {
+  const index = cache.data.debtTransactions.findIndex(d => d.id === id);
+  if (index === -1) return false;
+  
+  const updatedData = { ...cache.data.debtTransactions[index], ...updates };
+  delete updatedData.id;
+  delete updatedData.businessDate;
+  
+  updatedData.updatedAt = Date.now();
+  updatedData.version = oldVersion + 1;
+  
+  cache.data.debtTransactions[index] = { ...cache.data.debtTransactions[index], ...updates, version: oldVersion + 1 };
+  saveCache();
+  
+  const success = await saveToFirebase('debt', id, updatedData, oldVersion);
+  refreshUIAfterUpdate();
+  return success;
+}
+
+async function deleteDebt(id, businessDate) {
+  cache.data.debtTransactions = cache.data.debtTransactions.filter(d => d.id !== id);
+  saveCache();
+  
+  const success = await softDeleteItem('debt', id, businessDate);
+  refreshUIAfterUpdate();
+  return success;
+}
+
+// ========== KHỞI TẠO LẠI CACHE TỪ APP DATA (CHO COMPATIBLE) ==========
+function rebuildCacheFromAppData() {
+  if (typeof appData !== 'undefined') {
+    cache.data.expenses = appData.expenses || [];
+    cache.data.adminExpenses = appData.adminExpenses || [];
+    cache.data.debtTransactions = appData.debtTransactions || [];
+    cache.data.reports = appData.reports || {};
+    cache.categories = appData.categories || { expenses: [], adminExpenses: [], customers: [] };
+    cache.recent = appData.recent || { expenses: [], adminExpenses: [], customers: [] };
+    saveCache();
+    console.log("🔄 Đã rebuild cache từ appData");
+  }
+}
+
+// ========== XỬ LÝ OFFLINE QUEUE ==========
+async function flushOfflineQueue() {
+  if (!isOnline || pendingSyncQueue.length === 0) return;
+  
+  console.log(`📡 Đang xử lý ${pendingSyncQueue.length} tác vụ trong queue...`);
+  const queue = [...pendingSyncQueue];
+  pendingSyncQueue = [];
+  
+  for (const task of queue) {
+    if (task.type === 'expense') {
+      await saveToFirebase('expense', task.id, task.newData, task.oldVersion);
+    } else if (task.type === 'debt') {
+      await saveToFirebase('debt', task.id, task.newData, task.oldVersion);
+    }
+  }
+  
+  console.log("✅ Đã xử lý xong offline queue");
+}
+
+// ========== LẮNG NGHE ONLINE/OFFLINE ==========
+window.addEventListener('online', async () => {
+  console.log("🌐 Đã kết nối lại mạng");
+  isOnline = true;
+  await loadFromFirebase();
+  await flushOfflineQueue();
+  refreshUIAfterUpdate();
+});
+
+window.addEventListener('offline', () => {
+  console.log("📴 Mất kết nối mạng");
+  isOnline = false;
+});
+
+// ========== XỬ LÝ TAB NGỦ ==========
+document.addEventListener('visibilitychange', async () => {
+  if (!document.hidden) {
+    console.log("👁️ Tab được mở lại, đang tải dữ liệu mới...");
+    await loadFromFirebase();
+    refreshUIAfterUpdate();
+  }
+});
+
+// ========== REFRESH UI ==========
+function refreshUIAfterUpdate() {
+  if (isRealtimeUpdate) return;
+  
+  console.log("🔄 Refresh UI...");
+  
+  if (typeof updateBodyAdminClass === 'function') updateBodyAdminClass();
+  if (typeof loadTodayData === 'function') loadTodayData();
+  if (typeof renderManagerDashboard === 'function') renderManagerDashboard();
+  if (typeof renderCustomerDebtList === 'function') renderCustomerDebtList();
+  if (typeof renderRecentExpenses === 'function') renderRecentExpenses();
+  if (typeof renderRecentCustomers === 'function') renderRecentCustomers();
+  if (typeof renderRecentAdminExpenses === 'function') renderRecentAdminExpenses();
+  if (typeof updateTotalDebtDisplay === 'function') updateTotalDebtDisplay();
+  if (typeof updateSubmitButtonStatus === 'function') updateSubmitButtonStatus();
+  if (typeof refreshExpensePopupUI === 'function') refreshExpensePopupUI();
+  if (typeof refreshDebtPopupUI === 'function') refreshDebtPopupUI();
+}
+
+// ========== REALTIME LISTENER ==========
 function setupRealtimeListener() {
   const user = firebase.auth().currentUser;
   if (!user) return;
-
-  if (realtimeListenerRef) {
-    realtimeListenerRef.off();
-    realtimeListenerRef = null;
-  }
-
-  console.log("📡 Đang thiết lập realtime listener (child_changed)...");
-
-  const baseRef = database.ref(`cafeData/${STORE_ID}`);
-  realtimeListenerRef = baseRef;
-
-  // Xử lý tất cả các loại thay đổi: child_changed, child_added, child_removed
-  const handleDataChange = async (snapshot, eventType) => {
-    if (window._isRealtimeUpdate) {
-      console.log(`⏭️ Bỏ qua ${eventType} (đang xử lý)`);
-      return;
-    }
-
-    const changedData = snapshot.val();
-    const path = snapshot.key;
-
-    // Kiểm tra self-update: cùng user và cùng device
-    const isSelfUpdate = changedData && 
-                         changedData._syncedByDevice === deviceId && 
-                         changedData._syncedBy === user.uid;
-
-    if (isSelfUpdate) {
-      console.log(`⏭️ Bỏ qua self-update ${eventType} từ device ${deviceId}`);
-      return;
-    }
-
-    console.log(`📡 Phát hiện ${eventType} tại: ${path}`);
-
-    window._isRealtimeUpdate = true;
-
-    try {
-      // Cập nhật metadata riêng nếu path là metadata
-      if (path === 'metadata') {
-        const metadata = changedData;
-        if (metadata && metadata.categories && metadata.recent) {
-          const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-          let changed = false;
-          if (JSON.stringify(localData.categories) !== JSON.stringify(metadata.categories)) {
-            localData.categories = metadata.categories;
-            changed = true;
-          }
-          if (JSON.stringify(localData.recent) !== JSON.stringify(metadata.recent)) {
-            localData.recent = metadata.recent;
-            changed = true;
-          }
-          if (changed) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
-            window.appData = localData;
-            if (typeof appData !== 'undefined') Object.assign(appData, localData);
-            refreshUIAfterUpdate();
-          }
-        }
-        return;
+  
+  Object.keys(realtimeListeners).forEach(key => {
+    if (realtimeListeners[key]) realtimeListeners[key]();
+  });
+  realtimeListeners = {};
+  
+  console.log("📡 Đang thiết lập realtime listener...");
+  
+  const basePath = `cafeData/${STORE_ID}`;
+  
+  // Lắng nghe metadata
+  const metadataRef = database.ref(`${basePath}/metadata`);
+  realtimeListeners['metadata'] = metadataRef.on('value', async (snapshot) => {
+    if (isRealtimeUpdate) return;
+    isRealtimeUpdate = true;
+    
+    const metadata = snapshot.val();
+    if (metadata) {
+      let changed = false;
+      
+      if (metadata.categories && JSON.stringify(cache.categories) !== JSON.stringify(metadata.categories)) {
+        cache.categories = metadata.categories;
+        changed = true;
       }
-
-      // Đối với các thay đổi khác, chỉ tải lại ngày bị ảnh hưởng
-      // Tìm ngày từ path (cấu trúc: /reports/2026/05/26 hoặc /expenses/2026/05/26/id...)
-      const parts = path.split('/');
-      if (parts.length >= 4) {
-        const year = parts[1];
-        const month = parts[2];
-        const day = parts[3];
-        const changedDate = `${year}-${month}-${day}`;
-        
-        console.log(`📡 Chỉ cập nhật ngày ${changedDate}`);
-        
-        // Tải lại dữ liệu của ngày đó
-        await loadDateFromFirebase(changedDate);
-      } else {
-        // Fallback: tải lại toàn bộ nếu không xác định được ngày
-        await loadFromFirebase();
+      if (metadata.recent && JSON.stringify(cache.recent) !== JSON.stringify(metadata.recent)) {
+        cache.recent = metadata.recent;
+        changed = true;
+      }
+      if (metadata.version && metadata.version > cache.lastServerVersion) {
+        cache.lastServerVersion = metadata.version;
+        changed = true;
       }
       
-      refreshUIAfterUpdate();
-    } catch (err) {
-      console.error("❌ Lỗi xử lý realtime:", err);
-    } finally {
-      setTimeout(() => {
-        window._isRealtimeUpdate = false;
-      }, 100); // Giảm lock xuống 100ms
+      if (changed) {
+        saveCache();
+        refreshUIAfterUpdate();
+      }
     }
-  };
-
-  baseRef.on('child_changed', (snapshot) => handleDataChange(snapshot, 'child_changed'));
-  baseRef.on('child_added', (snapshot) => handleDataChange(snapshot, 'child_added'));
-  baseRef.on('child_removed', (snapshot) => handleDataChange(snapshot, 'child_removed'));
-
+    
+    setTimeout(() => { isRealtimeUpdate = false; }, 500);
+  });
+  
   console.log("✅ Realtime listener đã sẵn sàng");
 }
 
-// ========== XỬ LÝ CẬP NHẬT/NHẬP DỮ LIỆU ==========
-async function handleRealtimeUpdate(path, data) {
-  const parts = path.split('/');
-  
-  // Xử lý metadata
-  if (path === 'metadata') {
-    const metadata = data;
-    if (metadata) {
-      const localData = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if (localData) {
-        let changed = false;
-        if (metadata.categories && JSON.stringify(localData.categories) !== JSON.stringify(metadata.categories)) {
-          localData.categories = metadata.categories;
-          changed = true;
-        }
-        if (metadata.recent && JSON.stringify(localData.recent) !== JSON.stringify(metadata.recent)) {
-          localData.recent = metadata.recent;
-          changed = true;
-        }
-        if (changed) {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
-          window.appData = localData;
-          refreshUIAfterUpdate();
-        }
-      }
-    }
-    return;
-  }
-  
-  // Xử lý reports, expenses, adminExpenses, debtTransactions
-  if (parts.length >= 4) {
-    const type = parts[0];
-    const year = parts[1];
-    const month = parts[2];
-    const day = parts[3];
-    const itemId = parts[4];
-    const changedDate = `${year}-${month}-${day}`;
-    
-    console.log(`📡 Xử lý ${type} ngày ${changedDate} ${itemId ? `ID: ${itemId}` : ''}`);
-    
-    // Tải lại dữ liệu mới nhất của ngày này
-    const [reportSnap, expensesSnap, adminExpensesSnap, debtsSnap] = await Promise.all([
-      database.ref(`cafeData/${STORE_ID}/reports/${year}/${month}/${day}`).once('value'),
-      database.ref(`cafeData/${STORE_ID}/expenses/${year}/${month}/${day}`).once('value'),
-      database.ref(`cafeData/${STORE_ID}/adminExpenses/${year}/${month}/${day}`).once('value'),
-      database.ref(`cafeData/${STORE_ID}/debtTransactions/${year}/${month}/${day}`).once('value')
-    ]);
-    
-    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    
-    // Cập nhật report
-    const newReport = reportSnap.val();
-    if (newReport) {
-      if (!localData.reports) localData.reports = {};
-      const cleanReport = { ...newReport };
-      delete cleanReport._syncedAt;
-      delete cleanReport._syncedBy;
-      delete cleanReport._syncedByEmail;
-      delete cleanReport._syncedByRole;
-      delete cleanReport._syncedByDevice;
-      localData.reports[changedDate] = cleanReport;
-    } else if (localData.reports && localData.reports[changedDate]) {
-      delete localData.reports[changedDate];
-    }
-    
-    // 🔥 Cập nhật expenses - XÓA CÁC ITEM CŨ, THAY BẰNG DỮ LIỆU MỚI TỪ SERVER
-    localData.expenses = (localData.expenses || []).filter(e => e.date !== changedDate);
-    
-    const newExpensesMap = expensesSnap.val() || {};
-    Object.entries(newExpensesMap).forEach(([id, exp]) => {
-      // ⚠️ QUAN TRỌNG: Chỉ thêm item nếu chưa bị xóa
-      if (!exp.deleted) {
-        const cleanExp = { ...exp };
-        delete cleanExp._modifiedBy;
-        delete cleanExp._modifiedByRole;
-        delete cleanExp._modifiedByDevice;
-        localData.expenses.push({ id, date: changedDate, ...cleanExp });
-      }
-      // Nếu exp.deleted === true thì KHÔNG thêm vào (đã xóa trên server)
-    });
-    
-    // 🔥 Cập nhật adminExpenses tương tự
-    localData.adminExpenses = (localData.adminExpenses || []).filter(e => e.date !== changedDate);
-    const newAdminExpensesMap = adminExpensesSnap.val() || {};
-    Object.entries(newAdminExpensesMap).forEach(([id, exp]) => {
-      if (!exp.deleted) {
-        const cleanExp = { ...exp };
-        delete cleanExp._modifiedBy;
-        delete cleanExp._modifiedByRole;
-        delete cleanExp._modifiedByDevice;
-        localData.adminExpenses.push({ id, date: changedDate, ...cleanExp });
-      }
-    });
-    
-    // 🔥 Cập nhật debts - XÓA CÁC ITEM CŨ, THAY BẰNG DỮ LIỆU MỚI TỪ SERVER
-    localData.debtTransactions = (localData.debtTransactions || []).filter(d => d.date !== changedDate);
-    const newDebtsMap = debtsSnap.val() || {};
-    Object.entries(newDebtsMap).forEach(([id, debt]) => {
-      if (!debt.deleted) {
-        const cleanDebt = { ...debt };
-        delete cleanDebt._modifiedBy;
-        delete cleanDebt._modifiedByRole;
-        delete cleanDebt._modifiedByDevice;
-        localData.debtTransactions.push({ id, date: changedDate, ...cleanDebt });
-      }
-    });
-    
-    // Cập nhật version
-    localData._version = (localData._version || 0) + 1;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
-    window.appData = localData;
-    
-    // Hiển thị thông báo
-    const action = data ? (data.deleted ? "xóa" : "cập nhật") : "cập nhật";
-    showToast(`📡 Đã ${action} dữ liệu ngày ${formatDisplayDate(changedDate)}`);
-    refreshUIAfterUpdate();
-  }
-}
-
-// ========== XỬ LÝ XÓA DỮ LIỆU ==========
-async function handleRealtimeRemoval(path) {
-  const parts = path.split('/');
-  
-  if (parts.length >= 4) {
-    const type = parts[0];
-    const year = parts[1];
-    const month = parts[2];
-    const day = parts[3];
-    const changedDate = `${year}-${month}-${day}`;
-    
-    console.log(`📡 Xử lý xóa ${type} ngày ${changedDate}`);
-    
-    const localData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-    
-    // Xóa toàn bộ dữ liệu của ngày đó khỏi local
-    if (type === 'reports' && localData.reports) {
-      delete localData.reports[changedDate];
-    } else if (type === 'expenses') {
-      localData.expenses = (localData.expenses || []).filter(e => e.date !== changedDate);
-    } else if (type === 'adminExpenses') {
-      localData.adminExpenses = (localData.adminExpenses || []).filter(e => e.date !== changedDate);
-    } else if (type === 'debtTransactions') {
-      localData.debtTransactions = (localData.debtTransactions || []).filter(d => d.date !== changedDate);
-    }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localData));
-    window.appData = localData;
-    
-    showToast(`📡 Đã xóa dữ liệu ngày ${formatDisplayDate(changedDate)}`);
-    refreshUIAfterUpdate();
-  }
-}
-// ========== REFRESH UI SAU REALTIME UPDATE (MẠNH MẼ HƠN) ==========
-// ========== REFRESH UI SAU REALTIME UPDATE ==========
-function refreshUIAfterUpdate() {
-  console.log("🔄 Refresh UI sau realtime update...");
-  
-  // Đồng bộ biến appData toàn cục (quan trọng!)
-  const freshData = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
-  if (typeof appData !== 'undefined') {
-    // Gán từng thuộc tính để giữ tham chiếu
-    Object.keys(freshData).forEach(key => {
-      appData[key] = freshData[key];
-    });
-    // Thêm các thuộc tính mới nếu có
-    Object.keys(appData).forEach(key => {
-      if (!(key in freshData)) delete appData[key];
-    });
-  } else {
-    // Nếu chưa có biến appData, tạo mới
-    window.appData = freshData;
-  }
-  
-  // Đảm bảo cấu trúc dữ liệu
-  if (typeof ensureAppDataStructure === 'function') {
-    ensureAppDataStructure();
-  }
-  
-  // Render lại toàn bộ UI
-  if (typeof loadTodayData === 'function') {
-    loadTodayData();
-  }
-  
-  if (typeof renderManagerDashboard === 'function') {
-    renderManagerDashboard();
-  }
-  
-  if (typeof renderCustomerDebtList === 'function') {
-    renderCustomerDebtList();
-  }
-  
-  if (typeof renderRecentExpenses === 'function') {
-    renderRecentExpenses();
-  }
-  
-  if (typeof renderRecentCustomers === 'function') {
-    renderRecentCustomers();
-  }
-  
-  if (typeof renderRecentAdminExpenses === 'function') {
-    renderRecentAdminExpenses();
-  }
-  
-  if (typeof updateTotalDebtDisplay === 'function') {
-    updateTotalDebtDisplay();
-  }
-  
-  if (typeof updateSubmitButtonStatus === 'function') {
-    updateSubmitButtonStatus();
-  }
-  
-  console.log("✅ Refresh UI hoàn tất");
-}
-
-// ========== GHI ĐÈ SAVEDATA ==========
-const originalSaveData = window.saveData || function() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(window.appData));
-};
-
-window.saveData = function() {
-  if (window._isRealtimeUpdate) {
-    console.log("⏭️ Bỏ qua save (đang realtime update)");
-    return;
-  }
-  
-  if (window.appData) {
-    window.appData._version = (window.appData._version || 0) + 1;
-    window.appData._lastModified = Date.now();
-    window.appData._lastModifiedBy = deviceId;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(window.appData));
-  }
-  
-  if (originalSaveData !== window.saveData) {
-    originalSaveData();
-  }
-  
-  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
-  syncDebounceTimer = setTimeout(() => {
-    syncToFirebase();
-  }, 500);
-};
-
-// ========== KHỞI TẠO FIREBASE SYNC ==========
-async function initFirebaseSync() {
-  if (isInitialized) {
-    console.log("⏭️ Firebase Sync đã khởi tạo");
-    return;
-  }
+// ========== KHỞI TẠO ==========
+async function initFirebaseSyncV2() {
+  if (isInitialized) return;
   
   initDeviceId();
+  loadCache();
+  
+  // Nếu cache rỗng, thử rebuild từ appData cũ
+  if (cache.data.expenses.length === 0 && typeof appData !== 'undefined' && appData.expenses && appData.expenses.length > 0) {
+    rebuildCacheFromAppData();
+  }
   
   const user = firebase.auth().currentUser;
   if (user) {
-    const success = await loadFromFirebase();
-    if (success) {
-      setupRealtimeListener();
-      isInitialized = true;
-      console.log("🚀 Firebase Sync Pro - Đã sẵn sàng");
-    } else {
-      console.error("❌ Không thể tải dữ liệu, sẽ thử lại sau 5 giây");
-      setTimeout(() => initFirebaseSync(), 5000);
-    }
+    await loadFromFirebase();
+    setupRealtimeListener();
+    await flushOfflineQueue();
+    isInitialized = true;
+    console.log("🚀 Firebase Sync V2 đã sẵn sàng");
+    refreshUIAfterUpdate();
   }
 }
 
-// ========== CLEANUP ==========
 function cleanupFirebaseSync() {
-  if (realtimeListenerRef) {
-    realtimeListenerRef.off();
-    realtimeListenerRef = null;
-  }
-  if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
-  syncQueue = [];
-  isSyncing = false;
-  isLoading = false;
+  Object.keys(realtimeListeners).forEach(key => {
+    if (realtimeListeners[key]) realtimeListeners[key]();
+  });
+  realtimeListeners = {};
   isInitialized = false;
-  window._isRealtimeUpdate = false;
-}
-
-// ========== FORCE SYNC ==========
-async function forceSync() {
-  if (typeof showToast === 'function') showToast("🔄 Đang đồng bộ...");
-  await syncToFirebase();
-  await loadFromFirebase();
-  refreshUIAfterUpdate();
-  if (typeof showToast === 'function') showToast("✅ Đồng bộ hoàn tất");
 }
 
 // ========== EXPORT ==========
-window.initFirebaseSync = initFirebaseSync;
-window.loadFromFirebase = loadFromFirebase;
-window.syncToFirebase = syncToFirebase;
-window.forceSync = forceSync;
+window.initFirebaseSyncV2 = initFirebaseSyncV2;
 window.cleanupFirebaseSync = cleanupFirebaseSync;
+window.createExpense = createExpense;
+window.updateExpense = updateExpense;
+window.deleteExpense = deleteExpense;
+window.createDebt = createDebt;
+window.updateDebt = updateDebt;
+window.deleteDebt = deleteDebt;
+window.loadFromFirebase = loadFromFirebase;
+window.saveCache = saveCache;
+window.getCache = () => cache;
 
 // Lắng nghe auth state
 firebase.auth().onAuthStateChanged((user) => {
   if (user) {
-    if (!isInitialized) {
-      initFirebaseSync();
-    }
+    if (!isInitialized) initFirebaseSyncV2();
   } else {
     cleanupFirebaseSync();
     isInitialized = false;
   }
 });
-
-// ========== FORCE REFRESH TOÀN BỘ DỮ LIỆU ==========
-async function forceFullRefresh() {
-  console.log("🔄 Đang force refresh toàn bộ dữ liệu...");
-  
-  if (typeof showToast === 'function') {
-    showToast("🔄 Đang tải lại dữ liệu...");
-  }
-  
-  // Tắt realtime listener tạm thời để tránh xung đột
-  if (realtimeListenerRef) {
-    realtimeListenerRef.off();
-    realtimeListenerRef = null;
-  }
-  
-  // Tải lại dữ liệu từ Firebase
-  const success = await loadFromFirebase();
-  
-  if (success) {
-    // Khởi tạo lại listener
-    setupRealtimeListener();
-    
-    // Refresh UI mạnh mẽ
-    refreshUIAfterUpdate();
-    
-    if (typeof showToast === 'function') {
-      showToast("✅ Đã cập nhật dữ liệu mới nhất");
-    }
-  } else {
-    if (typeof showToast === 'function') {
-      showToast("⚠️ Không thể tải dữ liệu, vui lòng kiểm tra mạng");
-    }
-  }
-  
-  console.log("✅ Force refresh hoàn tất");
-}
-// Thêm vào phần EXPORT cuối file
-window.forceFullRefresh = forceFullRefresh;
